@@ -129,10 +129,10 @@ void MidiDeviceManager::UpdateDevices()
         for (const auto& driverPair : drivers_) {
             auto& driver = driverPair.second;
             if (driver) {
-                auto driverDevices = driver->GetRegisteredDevices();
+                auto devices = driver->GetRegisteredDevices();
                 driverDevices.insert(driverDevices.end(), 
-                                 std::make_move_iterator(driverDevices.begin()),
-                                 std::make_move_iterator(driverDevices.end()));
+                                 std::make_move_iterator(devices.begin()),
+                                 std::make_move_iterator(devices.end()));
             }
         }
     }
