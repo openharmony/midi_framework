@@ -46,7 +46,7 @@ OH_MidiStatusCode OH_MidiClient_Destroy(OH_MidiClient *client)
 OH_MidiStatusCode OH_MidiGetDevices(OH_MidiClient *client, OH_MidiDeviceInformation *infos, size_t *numDevices)
 {
     OHOS::MIDI::MidiClient *midiclient = (OHOS::MIDI::MidiClient*) client;
-    CHECK_AND_RETURN_RET_LOG(midiclient != nullptr && numDevices != nullptr && infos != nullptr,
+    CHECK_AND_RETURN_RET_LOG(midiclient != nullptr && numDevices != nullptr,
         MIDI_STATUS_GENERIC_INVALID_ARGUMENT,"Invalid parameter");
 
     return midiclient->GetDevices(infos, numDevices);
@@ -88,7 +88,7 @@ OH_MidiStatusCode OH_MidiCloseDevice(OH_MidiDevice *device)
 OH_MidiStatusCode OH_MidiGetDevicePorts(OH_MidiClient *client, int64_t deviceId, OH_MidiPortInformation *infos, size_t *numPorts)
 {
     OHOS::MIDI::MidiClient *midiclient = (OHOS::MIDI::MidiClient*) client;
-    CHECK_AND_RETURN_RET_LOG(midiclient != nullptr && infos != nullptr && numPorts != nullptr,
+    CHECK_AND_RETURN_RET_LOG(midiclient != nullptr && numPorts != nullptr,
         MIDI_STATUS_GENERIC_INVALID_ARGUMENT, "Invalid parameter");
     return midiclient->GetDevicePorts(deviceId, infos, numPorts);
 }
