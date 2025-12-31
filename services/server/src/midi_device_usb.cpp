@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#ifndef LOG_TAG
+#define LOG_TAG "UsbDeviceDriver"
+#endif
+
 #include "midi_log.h"
 #include "midi_device_usb.h"
 
@@ -50,13 +68,40 @@ int32_t UsbMidiTransportDeviceDriver::OpenDevice(int64_t deviceId)
 
 int32_t UsbMidiTransportDeviceDriver::CloseDevice(int64_t deviceId)
 {
-    return midiHdi_->OpenDevice(deviceId);
+    return midiHdi_->CloseDevice(deviceId);
 }
 
-int32_t UsbMidiTransportDeviceDriver::HanleUmpInput(int64_t deviceId, size_t portIndex, MidiEvent list)
+
+int32_t UsbMidiTransportDeviceDriver::OpenInputPort(int64_t deviceId, size_t portIndex, UmpInputCallback cb)
+{
+    auto usbCallback = sptr<UsbDriverCallback>::MakeSptr(cb);
+    return midiHdi_->OpenInputPort(deviceId, portIndex, usbCallback);
+}
+
+int32_t UsbMidiTransportDeviceDriver::CloseInputPort(int64_t deviceId, size_t portIndex)
+{
+    return midiHdi_->CloseInputPort(deviceId, portIndex);
+}
+
+int32_t UsbMidiTransportDeviceDriver::HanleUmpInput(int64_t deviceId, size_t portIndex, MidiEventInner list)
 {
     return 0;
 }
 
+int32_t UsbDriverCallback::OnMidiDataReceived(const std::vector<OHOS::HDI::Midi::V1_0::MidiMessage>& messages)
+{
+    std::vector<MidiEventInner> events;
+    events.reserve(messages.size());
+    for (auto& message: messages) {
+        MidiEventInner event = {
+            .timestamp = message.timestamp,
+            .length = message.data.size(),
+            .data = message.data.data(),
+        };
+        events.emplace_back(event);
+    }
+    callback_(events);
+    return 0;
+}
 } // namespace MIDI
 } // namespace OHOS

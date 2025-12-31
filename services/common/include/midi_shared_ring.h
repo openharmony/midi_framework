@@ -93,11 +93,11 @@ public:
     void NotifyConsumer(uint32_t wakeVal = IS_READY);
     bool IsEmpty() const;
     ControlHeader *GetControlHeader();
-    MidiStatusCode TryWriteEvents(const MidiEvent* events,
+    MidiStatusCode TryWriteEvents(const MidiEventInner* events,
                                   uint32_t         eventCount,
                                   uint32_t*        eventsWritten,
                                   bool             notify = true);
-    MidiStatusCode TryWriteEvent(const MidiEvent& event,
+    MidiStatusCode TryWriteEvent(const MidiEventInner& event,
                                  bool             notify = true);
 
     struct PeekedEvent {
@@ -113,15 +113,16 @@ public:
     MidiStatusCode PeekNext(PeekedEvent& outEvent);
 
     void CommitRead(const PeekedEvent& event);
-    void DrainToBatch(std::vector<BatchedEvent>& outBatch,
-                      uint32_t                   maxEvents = 0);
+    void DrainToBatch(std::vector<MidiEvent>& outEvents,
+                      std::vector<std::vector<uint32_t>>& outPayloadBuffers,
+                      uint32_t maxEvents = 0);
 
 private:
-    bool ValidateOneEvent(const MidiEvent& event) const;
+    bool ValidateOneEvent(const MidiEventInner& event) const;
     void WakeFutex(uint32_t wakeVal = IS_READY);
-    void WriteEvent(uint32_t writeIndex, const MidiEvent& event);
-    MidiStatusCode ValidateWriteArgs(const MidiEvent* events, uint32_t eventCount) const;
-    MidiStatusCode TryWriteOneEvent(const MidiEvent& event,
+    void WriteEvent(uint32_t writeIndex, const MidiEventInner& event);
+    MidiStatusCode ValidateWriteArgs(const MidiEventInner* events, uint32_t eventCount) const;
+    MidiStatusCode TryWriteOneEvent(const MidiEventInner& event,
                                     uint32_t length,
                                     uint32_t readIndex,
                                     uint32_t& writeIndex);
@@ -129,7 +130,8 @@ private:
     MidiStatusCode UpdateReadIndexIfNeed(uint32_t& readIndex, uint32_t writeIndex);
     MidiStatusCode HandleWrapIfNeeded(const ShmMidiEventHeader& hdr, uint32_t& r);
     MidiStatusCode BuildPeekedEvent(const ShmMidiEventHeader& hdr, uint32_t readIndex, PeekedEvent& outEvent);
-    BatchedEvent CopyOut(const PeekedEvent& peekEvent) const;
+    MidiEvent CopyOut(const PeekedEvent& peekedEvent,
+                      std::vector<uint32_t>& outPayloadBuffer) const;
 
     uint8_t*       base_{nullptr};
     ControlHeader* controler_{nullptr};

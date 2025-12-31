@@ -13,6 +13,10 @@
  * limitations under the License.
  */
 
+#ifndef LOG_TAG
+#define LOG_TAG "SharedMidiRing"
+#endif
+
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
@@ -407,13 +411,13 @@ void SharedMidiRing::NotifyConsumer(uint32_t wakeVal)
 
 //==================== Write Side ====================//
 
-MidiStatusCode SharedMidiRing::TryWriteEvent(const MidiEvent& event, bool notify)
+MidiStatusCode SharedMidiRing::TryWriteEvent(const MidiEventInner& event, bool notify)
 {
     uint32_t written = 0;
     return TryWriteEvents(&event, 1, &written, notify);
 }
 
-MidiStatusCode SharedMidiRing::TryWriteEvents(const MidiEvent* events,
+MidiStatusCode SharedMidiRing::TryWriteEvents(const MidiEventInner* events,
                                               uint32_t eventCount,
                                               uint32_t* eventsWritten,
                                               bool notify)
@@ -431,7 +435,7 @@ MidiStatusCode SharedMidiRing::TryWriteEvents(const MidiEvent* events,
     uint32_t writeIndex = controler_->writePosition.load();
 
     for (uint32_t i = 0; i < eventCount; ++i) {
-        const MidiEvent& event = events[i];
+        const MidiEventInner& event = events[i];
         if (!ValidateOneEvent(event)) {
             break;
         }
@@ -454,7 +458,7 @@ MidiStatusCode SharedMidiRing::TryWriteEvents(const MidiEvent* events,
     }
 
     if (notify) {
-        NotifyConsumer(); // todo: use event_fd
+        NotifyConsumer();
     }
     return (localWritten == eventCount) ? MidiStatusCode::OK : MidiStatusCode::WOULD_BLOCK;
 }
@@ -498,28 +502,35 @@ void SharedMidiRing::CommitRead(const PeekedEvent& ev)
     controler_->readPosition.store(end);
 }
 
-void SharedMidiRing::DrainToBatch(std::vector<BatchedEvent>& outBatch, uint32_t maxEvents)
+void SharedMidiRing::DrainToBatch(std::vector<MidiEvent>& outEvents,
+                                  std::vector<std::vector<uint32_t>>& outPayloadBuffers,
+                                  uint32_t maxEvents)
 {
     uint32_t count = 0;
     while (maxEvents == 0 || count < maxEvents) {
-        PeekedEvent pev;
-        MidiStatusCode st = PeekNext(pev);
-        if (st == MidiStatusCode::WOULD_BLOCK) {
+        PeekedEvent peekedEvent;
+        MidiStatusCode status = PeekNext(peekedEvent);
+        if (status == MidiStatusCode::WOULD_BLOCK) {
             break;
         }
-        if (st != MidiStatusCode::OK) {
+        if (status != MidiStatusCode::OK) {
             break;
         }
-        BatchedEvent ev = CopyOut(pev);
-        outBatch.push_back(std::move(ev));
-        CommitRead(pev);
+
+        std::vector<uint32_t> payloadBuffer;
+        MidiEvent copiedEvent = CopyOut(peekedEvent, payloadBuffer);
+
+        outEvents.push_back(copiedEvent);
+        outPayloadBuffers.push_back(std::move(payloadBuffer));
+
+        CommitRead(peekedEvent);
         ++count;
     }
 }
 
 //==================== Private Helpers (All <= 50 lines) ====================//
 
-MidiStatusCode SharedMidiRing::ValidateWriteArgs(const MidiEvent* events, uint32_t eventCount) const
+MidiStatusCode SharedMidiRing::ValidateWriteArgs(const MidiEventInner* events, uint32_t eventCount) const
 {
     if (eventCount == 0) {
         return MidiStatusCode::OK;
@@ -533,7 +544,7 @@ MidiStatusCode SharedMidiRing::ValidateWriteArgs(const MidiEvent* events, uint32
     return MidiStatusCode::OK;
 }
 
-bool SharedMidiRing::ValidateOneEvent(const MidiEvent& event) const
+bool SharedMidiRing::ValidateOneEvent(const MidiEventInner& event) const
 {
     // if (event.length > 0 && event.data == nullptr) { // to be deleted
     //     return false;
@@ -551,7 +562,7 @@ bool SharedMidiRing::ValidateOneEvent(const MidiEvent& event) const
     return true;
 }
 
-MidiStatusCode SharedMidiRing::TryWriteOneEvent(const MidiEvent& event,
+MidiStatusCode SharedMidiRing::TryWriteOneEvent(const MidiEventInner& event,
                                                 uint32_t totalBytes,
                                                 uint32_t readIndex,
                                                 uint32_t& writeIndex)
@@ -591,7 +602,7 @@ bool SharedMidiRing::UpdateWriteIndexIfNeed(uint32_t& writeIndex, uint32_t total
     return true;
 }
 
-void SharedMidiRing::WriteEvent(uint32_t writeIndex, const MidiEvent& event)
+void SharedMidiRing::WriteEvent(uint32_t writeIndex, const MidiEventInner& event)
 {
     uint8_t* dst = ringBase_ + writeIndex;
     auto* header = reinterpret_cast<ShmMidiEventHeader*>(dst);
@@ -664,16 +675,27 @@ MidiStatusCode SharedMidiRing::BuildPeekedEvent(const ShmMidiEventHeader& header
     return MidiStatusCode::OK;
 }
 
-BatchedEvent SharedMidiRing::CopyOut(const PeekedEvent& pev) const // todo: to be fix to ump format
+MidiEvent SharedMidiRing::CopyOut(const PeekedEvent& peekedEvent,
+                                  std::vector<uint32_t>& outPayloadBuffer) const
 {
-    BatchedEvent ev;
-    ev.timestamp = pev.timestamp;
-    ev.length    = pev.length;
-    ev.data.resize(pev.length);
-    if (pev.length > 0) {
-        std::memcpy(ev.data.data(), pev.payloadPtr, pev.length);
+    MidiEvent event {};
+    event.timestamp = peekedEvent.timestamp;
+
+    const size_t wordCount = static_cast<size_t>(peekedEvent.length);
+    event.length = wordCount;
+
+    const size_t payloadBytes = wordCount * sizeof(uint32_t);
+    outPayloadBuffer.resize(wordCount);
+
+    if (payloadBytes > 0) {
+        (void)memcpy_s(outPayloadBuffer.data(),
+                       payloadBytes,
+                       peekedEvent.payloadPtr,
+                       payloadBytes);
     }
-    return ev;
-} 
+
+    event.data = outPayloadBuffer.data();
+    return event;
+}
 } // namespace MIDI
 } // namespace OHOS
