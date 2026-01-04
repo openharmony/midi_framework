@@ -25,7 +25,7 @@
 #include "hilog/log.h"
 
 #undef LOG_DOMAIN
-#define LOG_DOMAIN 0xD002B12
+#define LOG_DOMAIN 0xD002BD0
 #ifndef OHOS_DEBUG
 #define DECORATOR_HILOG(op, fmt, args...) \
     do {                                  \
