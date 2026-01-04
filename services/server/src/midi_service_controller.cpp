@@ -180,12 +180,13 @@ int32_t MidiServiceController::CloseDevice(uint32_t clientId, int64_t deviceId)
 {
     std::lock_guard lock(lock_);
     auto it = deviceClientContexts_.find(deviceId);
-    CHECK_AND_RETURN_RET_LOG(it != deviceClientContexts_.end(), MIDI_STATUS_UNKNOWN_ERROR, "Device not found: deviceId=%{public}", deviceId);
+    CHECK_AND_RETURN_RET_LOG(it != deviceClientContexts_.end(), MIDI_STATUS_UNKNOWN_ERROR,
+        "Device not found: deviceId=%{public}" PRId64, deviceId);
 
     auto& clients = it->second.clients;
     auto clientIt = clients.find(clientId);
     
-    CHECK_AND_RETURN_RET_LOG(clientIt != clients.end(),MIDI_STATUS_UNKNOWN_ERROR
+    CHECK_AND_RETURN_RET_LOG(clientIt != clients.end(),MIDI_STATUS_UNKNOWN_ERROR,
         "Client not associated with device: deviceId=%{public}" PRId64 ", clientId=%{public}u", 
         deviceId, clientId);
     ClosePortforDevice(clientId, deviceId, it->second);
@@ -202,9 +203,9 @@ int32_t MidiServiceController::CloseDevice(uint32_t clientId, int64_t deviceId)
 
 void MidiServiceController::ClosePortforDevice(uint32_t clientId, int64_t deviceId, DeviceClientContext deviceClientContext)
 {
-    vector<uint32_t> portIndexs;
-    for (auto const &inputPort : deviceClientContext) {
-        portIndexs.push_back(inputPort->first);
+    std::vector<uint32_t> portIndexs;
+    for (auto const &inputPort : deviceClientContext.inputDeviceconnections_) {
+        portIndexs.push_back(inputPort.first);
     }
     for (auto portIndex : portIndexs) {
         CloseInputPort(clientId, deviceId, portIndex);

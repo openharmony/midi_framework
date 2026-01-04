@@ -51,7 +51,7 @@ int64_t MidiDeviceManager::GetOrCreateDeviceId(int64_t driverDeviceId, DeviceTyp
     std::lock_guard<std::mutex> lock(mappingMutex_);
    
     auto it = driverIdToMidiId_.find(driverDeviceId); // todo sessionId
-    CHECK_AND_RETURN(it == driverIdToMidiId_.end(),it->second);
+    CHECK_AND_RETURN_RET(it == driverIdToMidiId_.end(),it->second);
     int64_t deviceId = GenerateDeviceId();
     driverIdToMidiId_[driverDeviceId] = deviceId;
     return deviceId;
