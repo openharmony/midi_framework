@@ -283,7 +283,7 @@ int32_t MidiDeviceManager::OpenInputPort(std::shared_ptr<DeviceConnectionForInpu
     inputConnection = connection;
     std::weak_ptr<DeviceConnectionForInput> weakConnection = connection;
     // register DeviceConnectionForInput::HandleDeviceUmpInput
-    auto ret = driver->OpenInputPort(deviceId, static_cast<size_t>(portIndex),
+    auto ret = driver->OpenInputPort(device.driverDeviceId, static_cast<size_t>(portIndex),
         [weakConnection](std::vector<MidiEventInner> &events) {
             if (auto locked = weakConnection.lock()) {
                 locked->HandleDeviceUmpInput(events);
@@ -302,7 +302,7 @@ int32_t MidiDeviceManager::CloseInputPort(int64_t deviceId, uint32_t portIndex)
     }
     auto driver = GetDriverForDeviceType(device.deviceType);
     CHECK_AND_RETURN_RET_LOG(driver != nullptr, MIDI_STATUS_UNKNOWN_ERROR, "driver is nullptr");
-    return driver->CloseInputPort(deviceId,  static_cast<size_t>(portIndex));
+    return driver->CloseInputPort(device.driverDeviceId,  static_cast<size_t>(portIndex));
 }
 
 int32_t MidiDeviceManager::CloseDevice(int64_t deviceId)
