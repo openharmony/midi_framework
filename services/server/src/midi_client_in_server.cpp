@@ -26,6 +26,11 @@ MidiClientInServer::MidiClientInServer(uint32_t id, std::shared_ptr<MidiServiceC
     callback_ = callback;
 }
 
+MidiClientInServer::~MidiClientInServer()
+{
+    MIDI_INFO_LOG("~MidiClientInServer clientId:%{public}u", clientId_);
+}
+
 int32_t MidiClientInServer::GetDevices(std::vector<std::map<int32_t, std::string>> &devices) //todo 增加传结构体，为其实现序列化和返序列化
 {
     devices = MidiServiceController::GetInstance()->GetDevices();

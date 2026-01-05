@@ -174,8 +174,8 @@ HWTEST_F(MidiDeviceManagerUnitTest, OpenInputPort001, TestSize.Level1)
 
     EXPECT_CALL(*rawUsbDriver_, OpenInputPort(driverId, portIndex, _))
         .WillOnce(Return(MIDI_STATUS_OK));
-    UmpInputCallback cb = [](std::vector<MidiEventInner>& events){};
-    int32_t ret = manager_->OpenInputPort(globalId, portIndex, cb);
+    std::shared_ptr<DeviceConnectionForInput> inputConnection = nullptr;
+    int32_t ret = manager_->OpenInputPort(inputConnection, globalId, portIndex);
     EXPECT_EQ(ret, MIDI_STATUS_OK);
 }
 

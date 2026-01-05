@@ -100,7 +100,9 @@ HWTEST_F(MidiServiceControllerUnitTest, CreateClient001, TestSize.Level1)
     int32_t ret = controller_->CreateClientInServer(cb, clientObj, newClientId);
     EXPECT_EQ(ret, MIDI_STATUS_OK);
     EXPECT_GT(newClientId, 0);
-    EXPECT_NE(newClientId, clientId_); // Should be different from SetUp client
+    EXPECT_NE(newClientId, clientId_);
+    ret = controller_->DestroyMidiClient(newClientId);
+    EXPECT_EQ(ret, MIDI_STATUS_OK);
 }
 
 /**
@@ -355,4 +357,5 @@ HWTEST_F(MidiServiceControllerUnitTest, DestroyClient001, TestSize.Level1)
     EXPECT_CALL(*rawMockDriver_, CloseInputPort(driverId, portIndex)).WillOnce(Return(MIDI_STATUS_OK));
     EXPECT_CALL(*rawMockDriver_, CloseDevice(driverId)).WillOnce(Return(MIDI_STATUS_OK));
     int32_t ret = controller_->DestroyMidiClient(clientId_);
+    EXPECT_EQ(ret, MIDI_STATUS_OK);
 }
