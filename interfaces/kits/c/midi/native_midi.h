@@ -112,6 +112,7 @@ OH_MidiStatusCode OH_MidiOpenDevice(OH_MidiClient *client, int64_t deviceId, OH_
  * @param[out] device Pointer to receive the device handle.
  * @return {@link #MIDI_STATUS_OK} if execution succeeds.
  * or {@link #MIDI_STATUS_INVALID_CLIENT} if client is invalid.
+ * or {@link #MIDI_STATUS_DEVICE_ALREADY_OPEN} if device is opened by this client.
  * or {@link #MIDI_STATUS_GENERIC_INVALID_ARGUMENT} if device is nullptr, or the deviceAddr does not exist.
  * or {@link #MIDI_STATUS_GENERIC_IPC_FAILURE} if connection to system service fails.
  * @since 24
@@ -123,7 +124,7 @@ OH_MidiStatusCode OH_MidiOpenBleDevice(OH_MidiClient *client, const char *device
  *
  * @param device Target device handle.
  * @return {@link #MIDI_STATUS_OK} if execution succeeds.
- * or {@link #Midi_STATUS_INVALID_DEVICE_HANDLE} if device is invalid.
+ * or {@link #MIDI_STATUS_INVALID_DEVICE_HANDLE} if device is invalid.
  * @since 24
  */
 OH_MidiStatusCode OH_MidiCloseDevice(OH_MidiDevice *device);
@@ -154,6 +155,7 @@ OH_MidiStatusCode OH_MidiGetDevicePorts(OH_MidiClient *client, int64_t deviceId,
  * @param userData Context pointer passed to the callback.
  * @return {@link #MIDI_STATUS_OK} if execution succeeds.
  * or {@link #MIDI_STATUS_INVALID_DEVICE_HANDLE} if device is invalid.
+ * or {@link #MIDI_STATUS_PORT_ALREADY_OPEN} if port is opened by this client.
  * or {@link #MIDI_STATUS_INVALID_PORT} if portindex is invalid or not a input port.
  * or {@link #MIDI_STATUS_GENERIC_INVALID_ARGUMENT} if inputHandler is nullptr.
  * or {@link #MIDI_STATUS_GENERIC_IPC_FAILURE} if connection to system service fails.
@@ -171,6 +173,7 @@ OH_MidiStatusCode OH_MidiOpenInputPort(OH_MidiDevice *device,
  * @param descriptor Port index and protocol configuration.
  * @return {@link #MIDI_STATUS_OK} if execution succeeds.
  * or {@link #MIDI_STATUS_INVALID_DEVICE_HANDLE} if device is invalid.
+ * or {@link #MIDI_STATUS_PORT_ALREADY_OPEN} if port is opened by this client.
  * or {@link #MIDI_STATUS_INVALID_PORT} if portindex is invalid or not a output port.
  * or {@link #MIDI_STATUS_GENERIC_IPC_FAILURE} if connection to system service fails.
  * @since 24

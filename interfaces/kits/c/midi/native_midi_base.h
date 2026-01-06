@@ -115,6 +115,11 @@ typedef enum {
     MIDI_STATUS_DEVICE_ALREADY_OPEN,
 
     /**
+     * @error The client has already opened this port.
+     */
+    MIDI_STATUS_PORT_ALREADY_OPEN,
+
+    /**
      * @error The Midi system service has died or disconnected.
      * The client must be destroyed and recreated.
      */
