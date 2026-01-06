@@ -23,6 +23,7 @@ namespace MIDI {
 class MidiClientInServer : public IpcMidiClientInServerStub {
 public:
     MidiClientInServer(uint32_t id, std::shared_ptr<MidiServiceCallback> callback);
+    virtual ~MidiClientInServer();
     int32_t GetDevices(std::vector<std::map<int32_t, std::string>> &devices) override;
     int32_t GetDevicePorts(int64_t deviceId, std::vector<std::map<int32_t, std::string>> &ports) override;
     int32_t OpenDevice(int64_t deviceId) override;
