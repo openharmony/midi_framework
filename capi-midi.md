@@ -256,7 +256,7 @@ OH_MidiStatusCode OH_MidiGetDevices (OH_MidiClient *client, OH_MidiDeviceInforma
 ### OH_MidiOpenBleDevice()
 
 ```c
-OH_MidiStatusCode OH_MidiOpenBleDevice (OH_MidiClient *client, const char *deviceAddr, OH_MidiDevice **device)
+OH_MidiStatusCode OH_MidiOpenBleDevice (OH_MidiClient *client, const char *deviceAddr, OH_MidiDevice **device, int64_t *deviceId)
 
 ```
 

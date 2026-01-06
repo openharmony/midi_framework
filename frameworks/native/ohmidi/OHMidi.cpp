@@ -67,7 +67,8 @@ OH_MidiStatusCode OH_MidiOpenDevice(OH_MidiClient *client, int64_t deviceId, OH_
     return MIDI_STATUS_OK;
 }
 
-OH_MidiStatusCode OH_MidiOpenBleDevice(OH_MidiClient *client, const char *deviceAddr, OH_MidiDevice **device)
+OH_MidiStatusCode OH_MidiOpenBleDevice(OH_MidiClient *client, const char *deviceAddr, OH_MidiDevice **device,
+    int64_t *deviceId)
 {
     (void)deviceAddr;
     return MIDI_STATUS_OK;
@@ -94,7 +95,7 @@ OH_MidiStatusCode OH_MidiGetDevicePorts(OH_MidiClient *client, int64_t deviceId,
 }
 
 OH_MidiStatusCode OH_MidiOpenInputPort(OH_MidiDevice *device,
-                                       uint32_t portIndex,
+                                       OH_MidiPortDescriptor descriptor,
                                        OH_OnMidiReceived callback,
                                        void *userData)
 {
@@ -102,7 +103,7 @@ OH_MidiStatusCode OH_MidiOpenInputPort(OH_MidiDevice *device,
     CHECK_AND_RETURN_RET_LOG(midiDevice != nullptr,
         MIDI_STATUS_GENERIC_INVALID_ARGUMENT, "Invalid parameter");
     
-    OH_MidiStatusCode ret = midiDevice->OpenInputPort(portIndex, callback, userData);
+    OH_MidiStatusCode ret = midiDevice->OpenInputPort(descriptor.portIndex, callback, userData);
     CHECK_AND_RETURN_RET_LOG(ret == MIDI_STATUS_OK, ret, "OpenInputPort falid");
     return MIDI_STATUS_OK;
 }
