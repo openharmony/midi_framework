@@ -24,14 +24,18 @@ using namespace MIDI;
 using namespace testing;
 using namespace testing::ext;
 
-class MidiServiceControllerUnitTest : public testing::Test {
+class MidiServiceControllerUnitTest : public testing::Test
+{
 public:
-    static void SetUpTestCase() {
+    static void SetUpTestCase()
+    {
     }
-    static void TearDownTestCase() {
+    static void TearDownTestCase()
+    {
     }
 
-    void SetUp() override {
+    void SetUp() override
+    {
         controller_ = MidiServiceController::GetInstance();
         controller_->Init();
         mockDriver_ = std::make_unique<MockMidiDeviceDriver>(); 
@@ -43,7 +47,8 @@ public:
         controller_->CreateClientInServer(mockCallback_, clientObj, clientId_);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         controller_->DestroyMidiClient(clientId_);
         controller_->deviceManager_.devices_.clear();
         controller_->deviceManager_.driverIdToMidiId_.clear();

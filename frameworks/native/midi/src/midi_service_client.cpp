@@ -29,7 +29,6 @@ namespace OHOS {
 namespace MIDI {
 OH_MidiStatusCode MidiServiceClient::Init(sptr<MidiCallbackStub> callback, uint32_t &clientId)
 {
-    
     std::lock_guard lock(lock_);
     auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     CHECK_AND_RETURN_RET_LOG(samgr != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE, "Get samgr failed.");

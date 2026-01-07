@@ -60,7 +60,7 @@ void UmpProcessor::ProcessBytes(const uint8_t* data, size_t len, UmpCallback cal
                     FinalizeSysEx(callback);
                     in_sysex_ = false;
                 }
-                running_status_ = 0; 
+                running_status_ = 0;
                 continue; // F7 is stripped
             }
 

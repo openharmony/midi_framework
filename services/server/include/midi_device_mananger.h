@@ -33,7 +33,7 @@ struct DevicePortContext {
 
 class EventSubscriber : public EventFwk::CommonEventSubscriber {
 public:
-    explicit EventSubscriber(const EventFwk::CommonEventSubscribeInfo &subscribeInfo, 
+    explicit EventSubscriber(const EventFwk::CommonEventSubscribeInfo &subscribeInfo,
                            std::function<void()> callback)
         : EventFwk::CommonEventSubscriber(subscribeInfo), callback_(std::move(callback)) {}
     void OnReceiveEvent(const EventFwk::CommonEventData &data) override;

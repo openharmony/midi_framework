@@ -660,7 +660,8 @@ HWTEST_F(MidiSharedRingUnitTest, SharedMidiRingDrainToBatch_003, TestSize.Level1
     ASSERT_EQ(MidiStatusCode::OK, ring.TryWriteEvents(&ev1, 1, &written, false));
     ASSERT_EQ(1u, written);
 
-    // corrupt next header at current write position, and advance writePosition a bit to make ring non-empty after first commit.
+    // corrupt next header at current write position,
+    // and advance writePosition a bit to make ring non-empty after first commit.
     uint32_t corruptOff = ring.GetWritePosition();
     auto *ctrl = ring.GetControlHeader();
     ASSERT_NE(nullptr, ctrl);

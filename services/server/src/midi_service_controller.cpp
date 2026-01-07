@@ -118,7 +118,7 @@ int32_t MidiServiceController::OpenDevice(uint32_t clientId, int64_t deviceId)
             MIDI_STATUS_DEVICE_ALREADY_OPEN,
             "Device already opened by client: deviceId=%{public}" PRId64 ", clientId=%{public}u", deviceId, clientId);
         it->second.clients.insert(clientId);
-        MIDI_INFO_LOG("Client added to existing device: deviceId=%{public}" PRId64 ", clientId=%{public}u", 
+        MIDI_INFO_LOG("Client added to existing device: deviceId=%{public}" PRId64 ", clientId=%{public}u",
             deviceId, clientId);
         return MIDI_STATUS_OK;
     }
@@ -127,7 +127,7 @@ int32_t MidiServiceController::OpenDevice(uint32_t clientId, int64_t deviceId)
     std::unordered_set<int32_t> clients = { static_cast<int32_t>(clientId) };
     DeviceClientContext context(deviceId, std::move(clients));
     deviceClientContexts_.emplace(deviceId, std::move(context));
-    MIDI_INFO_LOG("Device opened successfully: deviceId=%{public}" PRId64 ", clientId=%{public}u", 
+    MIDI_INFO_LOG("Device opened successfully: deviceId=%{public}" PRId64 ", clientId=%{public}u",
              deviceId, clientId);
     return MIDI_STATUS_OK;
 }
