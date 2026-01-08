@@ -30,7 +30,7 @@ class MidiServiceClient : public MidiServiceInterface {
 public:
     MidiServiceClient() = default;
     virtual ~MidiServiceClient();
-    OH_MidiStatusCode Init(sptr<MidiCallbackStub> callback,uint32_t &clientId) override;
+    OH_MidiStatusCode Init(sptr<MidiCallbackStub> callback, uint32_t &clientId) override;
     OH_MidiStatusCode GetDevices(std::vector<std::map<int32_t, std::string>> &deviceInfos) override;
     OH_MidiStatusCode OpenDevice(int64_t deviceId) override;
     OH_MidiStatusCode CloseDevice(int64_t deviceId) override;

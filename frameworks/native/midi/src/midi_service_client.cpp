@@ -33,21 +33,11 @@ MidiServiceClient::~MidiServiceClient()
 
 OH_MidiStatusCode MidiServiceClient::Init(sptr<MidiCallbackStub> callback, uint32_t &clientId)
 {
-<<<<<<< master
     auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
     CHECK_AND_RETURN_RET_LOG(samgr != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE, "Get samgr failed.");
 
     sptr<IRemoteObject> object = samgr->LoadSystemAbility(MIDI_SERVICE_ID, 4); // 4s
-    CHECK_AND_RETURN_RET_LOG(object != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE,
-        "midi service remote object is NULL.");
-=======
-    std::lock_guard lock(lock_);
-    auto samgr = SystemAbilityManagerClient::GetInstance().GetSystemAbilityManager();
-    CHECK_AND_RETURN_RET_LOG(samgr != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE, "Get samgr failed.");
-
-    sptr<IRemoteObject> object = samgr->LoadSystemAbility(MIDI_SERVICE_ID, 4);
     CHECK_AND_RETURN_RET_LOG(object != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE, "midi service remote object is NULL.");
->>>>>>> master
 
     sptr<IMidiService> gsp = iface_cast<IMidiService>(object);
     CHECK_AND_RETURN_RET_LOG(gsp != nullptr, MIDI_STATUS_GENERIC_IPC_FAILURE, "init gsp is NULL.");

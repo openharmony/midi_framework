@@ -147,7 +147,7 @@ OH_MidiStatusCode MidiDevicePrivate::OpenInputPort(uint32_t portIndex, OH_OnMidi
     }
     auto inputPort = std::make_shared<MidiInputPort>(callback, userData);
 
-    std::shared_ptr<SharedMidiRing>& buffer = inputPort->GetRingBuffer();
+    std::shared_ptr<SharedMidiRing> &buffer = inputPort->GetRingBuffer();
     auto ret = ipc->OpenInputPort(buffer, deviceId_, portIndex);
     CHECK_AND_RETURN_RET_LOG(ret == MIDI_STATUS_OK, ret, "open inputport fail");
 

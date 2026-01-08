@@ -139,7 +139,7 @@ int32_t MidiServiceController::OpenInputPort(uint32_t clientId, std::shared_ptr<
                              "device %{public}" PRId64 "not opened", deviceId);
     CHECK_AND_RETURN_RET_LOG(it->second->clients.find(clientId) != it->second->clients.end(), MIDI_STATUS_UNKNOWN_ERROR,
                              "client %{public}u doesn't open device %{public}" PRId64 "", clientId, deviceId);
-    
+
     auto &inputPortConnections = it->second->inputDeviceconnections_;
     auto inputPort = inputPortConnections.find(portIndex);
     if (inputPort != inputPortConnections.end()) {
@@ -175,8 +175,8 @@ int32_t MidiServiceController::CloseInputPortInner(uint32_t clientId, int64_t de
     CHECK_AND_RETURN_RET_LOG(it != deviceClientContexts_.end(), MIDI_STATUS_INVALID_DEVICE_HANDLE,
                              "device %{public}" PRId64 "not opened", deviceId);
     CHECK_AND_RETURN_RET_LOG(it->second->clients.find(clientId) != it->second->clients.end(),
-                             MIDI_STATUS_GENERIC_INVALID_ARGUMENT, "client %{public}u doesn't open device %{public}" PRId64 "",
-                             clientId, deviceId); //todo 错误码问题
+                             MIDI_STATUS_GENERIC_INVALID_ARGUMENT, "client %{public}u doesn't open device %{public}" PRId64,
+                             clientId, deviceId);
     auto &inputPortConnections = it->second->inputDeviceconnections_;
     auto inputPort = inputPortConnections.find(portIndex);
     if (inputPort != inputPortConnections.end()) {
@@ -199,7 +199,7 @@ int32_t MidiServiceController::CloseDevice(uint32_t clientId, int64_t deviceId)
     CHECK_AND_RETURN_RET_LOG(it != deviceClientContexts_.end(), MIDI_STATUS_INVALID_DEVICE_HANDLE,
                              "Device not found: deviceId=%{public}" PRId64, deviceId);
 
-    auto& clients = it->second->clients;
+    auto &clients = it->second->clients;
     auto clientIt = clients.find(clientId);
     
     CHECK_AND_RETURN_RET_LOG(clientIt != clients.end(), MIDI_STATUS_INVALID_DEVICE_HANDLE,
@@ -238,7 +238,7 @@ int32_t MidiServiceController::DestroyMidiClient(uint32_t clientId)
                              "Client not found for destruction: %{public}u", clientId);
 
     for (auto deviceIt = deviceClientContexts_.begin(); deviceIt != deviceClientContexts_.end();) {
-        auto& clients = deviceIt->second->clients;
+        auto &clients = deviceIt->second->clients;
         if (clients.find(clientId) != clients.end()) {
             int64_t deviceId = deviceIt->first;
             // todo 关闭打开的端口
