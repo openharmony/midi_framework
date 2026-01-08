@@ -4,6 +4,16 @@
             "project": "drivers_interface",
             "path": "drivers/interface",
             "pr_url": "https://gitcode.com/openharmony/drivers_interface/pull/1836"
+        },
+        {
+            "project": "productdefine_commmon",
+            "path": "productdefine/common",
+            "pr_url": "https://gitcode.com/openharmony/productdefine_commmon/pull/1083"
+        },
+        {
+            "project": "drivers_peripheral",
+            "path": "drivers/peripheral",
+            "pr_url": "https://gitcode.com/openharmony/drivers_peripheral/pull/8421"
         }
     ]
 }
