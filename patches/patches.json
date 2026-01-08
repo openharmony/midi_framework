@@ -14,6 +14,11 @@
             "project": "drivers_peripheral",
             "path": "drivers/peripheral",
             "pr_url": "https://gitcode.com/openharmony/drivers_peripheral/pull/8421"
+        },
+        {
+            "project": "build",
+            "path": "build",
+            "pr_url": "https://gitcode.com/openharmony/build/pull/6402"
         }
     ]
 }
