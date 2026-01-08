@@ -1,0 +1,9 @@
+{
+    "patches": [
+        {
+            "project": "drivers_interface",
+            "path": "drivers/interface",
+            "pr_url": "https://gitcode.com/openharmony/drivers_interface/pull/1836"
+        }
+    ]
+}

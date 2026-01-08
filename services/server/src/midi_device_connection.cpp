@@ -34,7 +34,10 @@ namespace OHOS {
 namespace MIDI {
 
 // ====== UniqueFd ======
-UniqueFd::~UniqueFd() { Reset(); }
+UniqueFd::~UniqueFd()
+{
+    Reset();
+}
 
 UniqueFd::UniqueFd(UniqueFd &&other) noexcept
 {
@@ -65,29 +68,41 @@ void DrainCounterFd(int fd)
     if (fd < 0) {
         return;
     }
-    while (true) {
+    const int kMaxLoop = 16;
+    int loops = 0;
+
+    while (loops < kMaxLoop) {
         uint64_t counter = 0;
         const ssize_t ret = ::read(fd, &counter, sizeof(counter));
-        if (ret < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+        if (ret < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break;
+            }
             break;
         }
-        if (ret <= 0) {
+        if (ret == 0) {
             break;
         }
+        loops++;
     }
 }
 
 // ====== DeviceConnectionBase ======
-DeviceConnectionBase::DeviceConnectionBase(DeviceConnectionInfo info) : info_(info) {}
+DeviceConnectionBase::DeviceConnectionBase(DeviceConnectionInfo info) : info_(info)
+{}
 
-int32_t DeviceConnectionBase::AddClientConnection(uint32_t clientId, int64_t deviceHandle,
-                                                  std::shared_ptr<SharedMidiRing> &buffer)
+int32_t DeviceConnectionBase::AddClientConnection(
+    uint32_t clientId, int64_t deviceHandle, std::shared_ptr<SharedMidiRing> &buffer)
 {
     std::lock_guard<std::mutex> lock(clientsMutex_);
     auto clientConnection = std::make_shared<ClientConnectionInServer>(clientId, deviceHandle, GetInfo().portIndex);
     CHECK_AND_RETURN_RET_LOG(clientConnection != nullptr, MIDI_STATUS_UNKNOWN_ERROR, "creat client connection fail");
-    CHECK_AND_RETURN_RET_LOG(clientConnection->CreateRingBuffer() == MIDI_STATUS_OK, MIDI_STATUS_UNKNOWN_ERROR,
-                             "init client connection fail");
+    CHECK_AND_RETURN_RET_LOG(clientConnection->CreateRingBuffer() == MIDI_STATUS_OK,
+        MIDI_STATUS_UNKNOWN_ERROR,
+        "init client connection fail");
     buffer = clientConnection->GetRingBuffer();
     clients_.push_back(std::move(clientConnection));
     return MIDI_STATUS_OK;
@@ -96,11 +111,11 @@ int32_t DeviceConnectionBase::AddClientConnection(uint32_t clientId, int64_t dev
 void DeviceConnectionBase::RemoveClientConnection(uint32_t clientId)
 {
     std::lock_guard<std::mutex> lock(clientsMutex_);
-    clients_.erase(std::remove_if(clients_.begin(), clients_.end(),
-                                  [&](const std::shared_ptr<ClientConnectionInServer> &c) {
-                                      return c && c->GetClientId() == clientId;
-                                  }),
-                   clients_.end());
+    clients_.erase(
+        std::remove_if(clients_.begin(),
+            clients_.end(),
+            [&](const std::shared_ptr<ClientConnectionInServer> &c) { return c && c->GetClientId() == clientId; }),
+        clients_.end());
 }
 
 bool DeviceConnectionBase::IsEmptyClientConections()
@@ -116,7 +131,8 @@ std::vector<std::shared_ptr<ClientConnectionInServer>> DeviceConnectionBase::Sna
 }
 
 // ====== DeviceConnectionForInput ======
-DeviceConnectionForInput::DeviceConnectionForInput(DeviceConnectionInfo info) : DeviceConnectionBase(info) {}
+DeviceConnectionForInput::DeviceConnectionForInput(DeviceConnectionInfo info) : DeviceConnectionBase(info)
+{}
 
 void DeviceConnectionForInput::HandleDeviceUmpInput(std::vector<MidiEventInner> &events)
 {
@@ -131,14 +147,18 @@ void DeviceConnectionForInput::BroadcastToClients(const MidiEventInner &ev)
     for (auto &c : clients) {
         if (!c)
             continue;
-        c->TrySendToClient(ev); // debug: check return value
+        c->TrySendToClient(ev);  // debug: check return value
     }
 }
 
 // ====== DeviceConnectionForOutput ======
-DeviceConnectionForOutput::DeviceConnectionForOutput(DeviceConnectionInfo info) : DeviceConnectionBase(info) {}
+DeviceConnectionForOutput::DeviceConnectionForOutput(DeviceConnectionInfo info) : DeviceConnectionBase(info)
+{}
 
-DeviceConnectionForOutput::~DeviceConnectionForOutput() { (void)Stop(); }
+DeviceConnectionForOutput::~DeviceConnectionForOutput()
+{
+    (void)Stop();
+}
 
 int32_t DeviceConnectionForOutput::Start()
 {
@@ -172,7 +192,10 @@ int32_t DeviceConnectionForOutput::Stop()
     return MIDI_STATUS_OK;
 }
 
-int DeviceConnectionForOutput::GetNotifyEventFdForClients() const { return notifyEventFd_.Get(); }
+int DeviceConnectionForOutput::GetNotifyEventFdForClients() const
+{
+    return notifyEventFd_.Get();
+}
 
 void DeviceConnectionForOutput::SetPerClientMaxPendingEvents(size_t maxPendingEvents)
 {
@@ -215,7 +238,7 @@ int32_t DeviceConnectionForOutput::InitEpollAndFds()
     evTimer.events = EPOLLIN;
     evTimer.data.u64 = kEpollTagTimerFd;
     if (::epoll_ctl(epollFd_.Get(), EPOLL_CTL_ADD, timerFd_.Get(), &evTimer) !=
-        0) { // todo: timer epoll maybe no need, one fd enough?
+        0) {  // todo: timer epoll maybe no need, one fd enough?
         return MIDI_STATUS_UNKNOWN_ERROR;
     }
 
@@ -231,13 +254,19 @@ void DeviceConnectionForOutput::WakeWorkerByEventFd()
     (void)::write(notifyEventFd_.Get(), &one, sizeof(one));
 }
 
-void DeviceConnectionForOutput::DrainEventFd() { DrainCounterFd(notifyEventFd_.Get()); }
+void DeviceConnectionForOutput::DrainEventFd()
+{
+    DrainCounterFd(notifyEventFd_.Get());
+}
 
-void DeviceConnectionForOutput::DrainTimerFd() { DrainCounterFd(timerFd_.Get()); }
+void DeviceConnectionForOutput::DrainTimerFd()
+{
+    DrainCounterFd(timerFd_.Get());
+}
 
 void DeviceConnectionForOutput::ThreadMain()
 {
-    UpdateNextTimer(); // 初始 disarm 或设定
+    UpdateNextTimer();  // 初始 disarm 或设定
 
     while (running_.load()) {
         epoll_event events[8]{};
@@ -289,14 +318,14 @@ void DeviceConnectionForOutput::DrainSingleClientRing(ClientConnectionInServer &
         SharedMidiRing::PeekedEvent ringEvent{};
         const auto status = clientRing.PeekNext(ringEvent);
 
-        if (status == MidiStatusCode::WOULD_BLOCK) { // todo: no need
+        if (status == MidiStatusCode::WOULD_BLOCK) {  // todo: no need
             break;
         }
         if (status != MidiStatusCode::OK) {
             break;
         }
 
-        if (ringEvent.timestamp == 0) { // todo: use func and judge if timestamp + 1 < now
+        if (ringEvent.timestamp == 0) {  // todo: use func and judge if timestamp + 1 < now
             if (!ConsumeRealtimeEvent(clientRing, ringEvent)) {
                 break;
             }
@@ -310,17 +339,17 @@ void DeviceConnectionForOutput::DrainSingleClientRing(ClientConnectionInServer &
     }
 }
 
-bool DeviceConnectionForOutput::ConsumeRealtimeEvent(SharedMidiRing &clientRing,
-                                                     const SharedMidiRing::PeekedEvent &ringEvent)
+bool DeviceConnectionForOutput::ConsumeRealtimeEvent(
+    SharedMidiRing &clientRing, const SharedMidiRing::PeekedEvent &ringEvent)
 {
-    std::vector<uint8_t> payload; // todo: do not create vector here
+    std::vector<uint8_t> payload;  // todo: do not create vector here
 
     payload.assign(ringEvent.payloadPtr, ringEvent.payloadPtr + ringEvent.length);
 
     if (!TryAppendToSendCache(payload)) {
-        FlushSendCacheToDriver(); // todo: flush outside
+        FlushSendCacheToDriver();  // todo: flush outside
     }
-    if (!TryAppendToSendCache(payload)) { // todo: no need if, send directly
+    if (!TryAppendToSendCache(payload)) {  // todo: no need if, send directly
         SendToDriver(payload);
     }
 
@@ -329,8 +358,7 @@ bool DeviceConnectionForOutput::ConsumeRealtimeEvent(SharedMidiRing &clientRing,
 }
 
 bool DeviceConnectionForOutput::ConsumeNonRealtimeEvent(ClientConnectionInServer &clientConnection,
-                                                        SharedMidiRing &clientRing,
-                                                        const SharedMidiRing::PeekedEvent &ringEvent)
+    SharedMidiRing &clientRing, const SharedMidiRing::PeekedEvent &ringEvent)
 {
     if (clientConnection.IsPendingFull()) {
         return false;
@@ -354,7 +382,7 @@ bool DeviceConnectionForOutput::ConsumeNonRealtimeEvent(ClientConnectionInServer
 // ---------------- Step2: collect due from per-client heaps ----------------
 void DeviceConnectionForOutput::CollectDueEventsFromClientHeaps()
 {
-    const auto clientsSnapshot = SnapshotClients(); // todo: make clientsSnapshot be clientsSnapshot_
+    const auto clientsSnapshot = SnapshotClients();  // todo: make clientsSnapshot be clientsSnapshot_
     auto now = std::chrono::steady_clock::now();
 
     while (true) {
@@ -363,7 +391,7 @@ void DeviceConnectionForOutput::CollectDueEventsFromClientHeaps()
         if (!earliestClient) {
             break;
         }
-        if (earliestDueTime > now) { // todo: earliestDueTime  > now + 1, new a function
+        if (earliestDueTime > now) {  // todo: earliestDueTime  > now + 1, new a function
             break;
         }
 
@@ -377,7 +405,7 @@ void DeviceConnectionForOutput::CollectDueEventsFromClientHeaps()
         if (!TryAppendToSendCache(payload)) {
             FlushSendCacheToDriver();
         }
-        if (!TryAppendToSendCache(payload)) { // todo: no need if, send directly
+        if (!TryAppendToSendCache(payload)) {  // todo: no need if, send directly
             SendToDriver(payload);
         }
 
@@ -475,7 +503,7 @@ void DeviceConnectionForOutput::UpdateNextTimer()
         }
     }
 
-    itimerspec newValue{}; // defaul all zero, hasDue == false to disarm
+    itimerspec newValue{};  // defaul all zero, hasDue == false to disarm
     if (hasDue) {
         auto now = std::chrono::steady_clock::now();
         if (earliestDueTime < now) {
@@ -488,5 +516,5 @@ void DeviceConnectionForOutput::UpdateNextTimer()
 
     (void)::timerfd_settime(timerFd_.Get(), 0, &newValue, nullptr);
 }
-} // namespace MIDI
-} // namespace OHOS
+}  // namespace MIDI
+}  // namespace OHOS
