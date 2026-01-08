@@ -27,6 +27,7 @@
 
 namespace OHOS {
 namespace MIDI {
+
 class MidiClientCallback : public MidiCallbackStub {
 public:
     MidiClientCallback(OH_MidiCallbacks callbacks, void *userData,
@@ -39,7 +40,8 @@ public:
     std::function<void(OH_MidiDeviceChangeAction change, OH_MidiDeviceInformation info)> deviceChange_;
 };
 
-static bool ConvertToDeviceInformation(const std::map<int32_t, std::string> &deviceInfo, OH_MidiDeviceInformation& outInfo)
+static bool ConvertToDeviceInformation(const std::map<int32_t, std::string> &deviceInfo,
+                                       OH_MidiDeviceInformation &outInfo)
 {
     // 初始化outInfo
     memset(&outInfo, 0, sizeof(outInfo));
@@ -68,7 +70,8 @@ static bool ConvertToDeviceInformation(const std::map<int32_t, std::string> &dev
     return true;
 }
 
-static bool ConvertToPortInformation(const std::map<int32_t, std::string> &portInfo, int64_t deviceId, OH_MidiPortInformation& outInfo)
+static bool ConvertToPortInformation(const std::map<int32_t, std::string> &portInfo, int64_t deviceId,
+                                     OH_MidiPortInformation &outInfo)
 {
     memset(&outInfo, 0, sizeof(outInfo));
 
@@ -81,7 +84,7 @@ static bool ConvertToPortInformation(const std::map<int32_t, std::string> &portI
     it = portInfo.find(DIRECTION);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end(), false, "direction error");
     outInfo.direction = static_cast<OH_MidiPortDirection>(std::stoi(it->second));
-    
+
     it = portInfo.find(PORT_NAME);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end() && !it->second.empty(), false, "port name error");
     strncpy(outInfo.name, it->second.c_str(), sizeof(outInfo.name) - 1);
@@ -93,18 +96,19 @@ MidiClientCallback::MidiClientCallback(OH_MidiCallbacks callbacks, void *userDat
     std::function<void(OH_MidiDeviceChangeAction change, OH_MidiDeviceInformation info)> deviceChange)
     : callbacks_(callbacks), userData_(userData), deviceChange_(deviceChange)
 {
-
 }
 
 int32_t MidiClientCallback::NotifyDeviceChange(int32_t change, const std::map<int32_t, std::string> &deviceInfo)
 {
-    CHECK_AND_RETURN_RET_LOG(callbacks_.onDeviceChange != nullptr, MIDI_STATUS_UNKNOWN_ERROR, "callbacks_.onDeviceChange is nullptr");
-    
+    CHECK_AND_RETURN_RET_LOG(callbacks_.onDeviceChange != nullptr, MIDI_STATUS_UNKNOWN_ERROR,
+                             "callbacks_.onDeviceChange is nullptr");
+
     OH_MidiDeviceInformation info;
     bool ret = ConvertToDeviceInformation(deviceInfo, info);
     // todo 改变midiClient中的设备信息
     CHECK_AND_RETURN_RET_LOG(ret, MIDI_STATUS_UNKNOWN_ERROR, "ConvertToDeviceInformation failed");
     deviceChange_(static_cast<OH_MidiDeviceChangeAction>(change), info);
+
     callbacks_.onDeviceChange(userData_, static_cast<OH_MidiDeviceChangeAction>(change), info);
     return 0;
 }
@@ -122,10 +126,8 @@ MidiDevicePrivate::MidiDevicePrivate(std::shared_ptr<MidiServiceInterface> midiS
     MIDI_INFO_LOG("MidiDevicePrivate created");
 }
 
-MidiDevicePrivate::~MidiDevicePrivate()
-{
-    MIDI_INFO_LOG("MidiDevicePrivate destroyed");
-}
+MidiDevicePrivate::~MidiDevicePrivate() { MIDI_INFO_LOG("MidiDevicePrivate destroyed"); }
+
 
 OH_MidiStatusCode MidiDevicePrivate::CloseDevice()
 {
@@ -134,8 +136,7 @@ OH_MidiStatusCode MidiDevicePrivate::CloseDevice()
     return ipc->CloseDevice(deviceId_);
 }
 
-OH_MidiStatusCode MidiDevicePrivate::OpenInputPort(uint32_t portIndex, OH_OnMidiReceived callback,
-                                            void *userData)
+OH_MidiStatusCode MidiDevicePrivate::OpenInputPort(uint32_t portIndex, OH_OnMidiReceived callback, void *userData)
 {
     auto ipc = ipc_.lock();
     CHECK_AND_RETURN_RET_LOG(ipc != nullptr, MIDI_STATUS_UNKNOWN_ERROR, "ipc_ is nullptr");
@@ -145,12 +146,12 @@ OH_MidiStatusCode MidiDevicePrivate::OpenInputPort(uint32_t portIndex, OH_OnMidi
         CHECK_AND_RETURN_RET(iter == inputPortsMap_.end(), MIDI_STATUS_OK);
     }
     auto inputPort = std::make_shared<MidiInputPort>(callback, userData);
+
     std::shared_ptr<SharedMidiRing>& buffer = inputPort->GetRingBuffer();
     auto ret = ipc->OpenInputPort(buffer, deviceId_, portIndex);
     CHECK_AND_RETURN_RET_LOG(ret == MIDI_STATUS_OK, ret, "open inputport fail");
 
-    CHECK_AND_RETURN_RET_LOG(inputPort->StartReceiverThread() == true,
-                             MIDI_STATUS_UNKNOWN_ERROR,
+    CHECK_AND_RETURN_RET_LOG(inputPort->StartReceiverThread() == true, MIDI_STATUS_UNKNOWN_ERROR,
                              "start receiver thread fail");
 
     {
@@ -177,8 +178,7 @@ OH_MidiStatusCode MidiDevicePrivate::ClosePort(uint32_t portIndex)
     return MIDI_STATUS_OK;
 }
 
-MidiInputPort::MidiInputPort(OH_OnMidiReceived callback, void *userData)
-    : callback_(callback), userData_(userData)
+MidiInputPort::MidiInputPort(OH_OnMidiReceived callback, void *userData) : callback_(callback), userData_(userData)
 {
     MIDI_INFO_LOG("InputPort created");
 }
@@ -186,8 +186,7 @@ MidiInputPort::MidiInputPort(OH_OnMidiReceived callback, void *userData)
 bool MidiInputPort::StartReceiverThread()
 {
     CHECK_AND_RETURN_RET_LOG(running_.load() != true, false, "already start");
-    CHECK_AND_RETURN_RET_LOG(ringBuffer_ != nullptr && callback_ != nullptr,
-        false, "buffer or callback is nullptr");
+    CHECK_AND_RETURN_RET_LOG(ringBuffer_ != nullptr && callback_ != nullptr, false, "buffer or callback is nullptr");
     running_.store(true);
     receiverThread_ = std::thread(&MidiInputPort::ReceiverThreadLoop, this);
     return true;
@@ -196,11 +195,11 @@ bool MidiInputPort::StartReceiverThread()
 bool MidiInputPort::StopReceiverThread()
 {
     bool expected = true;
-    
+
     CHECK_AND_RETURN_RET(running_.compare_exchange_strong(expected, false), true);
 
     if (ringBuffer_) {
-        std::atomic<uint32_t>* futexPtr = ringBuffer_->GetFutex();
+        std::atomic<uint32_t> *futexPtr = ringBuffer_->GetFutex();
         if (futexPtr != nullptr) {
             (void)FutexTool::FutexWake(futexPtr, IS_PRE_EXIT);
         }
@@ -218,7 +217,7 @@ void MidiInputPort::ReceiverThreadLoop()
         return;
     }
 
-    std::atomic<uint32_t>* futexPtr = ringBuffer_->GetFutex();
+    std::atomic<uint32_t> *futexPtr = ringBuffer_->GetFutex();
     if (futexPtr == nullptr) {
         running_.store(false);
         return;
@@ -227,10 +226,7 @@ void MidiInputPort::ReceiverThreadLoop()
     constexpr int64_t kWaitForever = -1;
 
     while (running_.load()) {
-        (void)FutexTool::FutexWait(
-            futexPtr,
-            kWaitForever,
-            [this]() { return ShouldWakeForReadOrExit(); });
+        (void)FutexTool::FutexWait(futexPtr, kWaitForever, [this]() { return ShouldWakeForReadOrExit(); });
 
         if (!running_.load()) {
             break;
@@ -239,7 +235,6 @@ void MidiInputPort::ReceiverThreadLoop()
         DrainRingAndDispatch();
     }
 }
-
 
 bool MidiInputPort::ShouldWakeForReadOrExit() const
 {
@@ -250,7 +245,7 @@ bool MidiInputPort::ShouldWakeForReadOrExit() const
         return true;
     }
 
-    SharedMidiRing::PeekedEvent peekedEvent {};
+    SharedMidiRing::PeekedEvent peekedEvent{};
     MidiStatusCode status = ringBuffer_->PeekNext(peekedEvent);
     return (status == MidiStatusCode::OK);
 }
@@ -273,40 +268,27 @@ void MidiInputPort::DrainRingAndDispatch()
     std::vector<OH_MidiEvent> callbackEvents;
     callbackEvents.reserve(midiEvents.size());
 
-    for (const auto& event : midiEvents) {
-        OH_MidiEvent callbackEvent {};
+    for (const auto &event : midiEvents) {
+        OH_MidiEvent callbackEvent{};
         callbackEvent.timestamp = event.timestamp;
         callbackEvent.length = event.length;
-        callbackEvent.data = event.data;       
+        callbackEvent.data = event.data;
         callbackEvents.push_back(callbackEvent);
     }
 
     callback_(userData_, callbackEvents.data(), callbackEvents.size());
 }
 
+MidiInputPort::~MidiInputPort() { (void)StopReceiverThread(); }
 
+std::shared_ptr<SharedMidiRing> &MidiInputPort::GetRingBuffer() { return ringBuffer_; }
 
-MidiInputPort::~MidiInputPort()
-{
-    (void)StopReceiverThread();
-}
-
-std::shared_ptr<SharedMidiRing> &MidiInputPort::GetRingBuffer()
-{
-    return ringBuffer_;
-}
-
-
-MidiClientPrivate::MidiClientPrivate() 
-    : ipc_(std::make_shared<MidiServiceClient>()) 
+MidiClientPrivate::MidiClientPrivate() : ipc_(std::make_shared<MidiServiceClient>())
 {
     MIDI_INFO_LOG("MidiClientPrivate created");
 }
 
-MidiClientPrivate::~MidiClientPrivate()
-{
-    MIDI_INFO_LOG("MidiClientPrivate destroyed");
-}
+MidiClientPrivate::~MidiClientPrivate() { MIDI_INFO_LOG("MidiClientPrivate destroyed"); }
 
 OH_MidiStatusCode MidiClientPrivate::Init(OH_MidiCallbacks callbacks, void *userData)
 {
@@ -356,7 +338,7 @@ OH_MidiStatusCode MidiClientPrivate::GetDevices(OH_MidiDeviceInformation *infos,
         *numDevices = deviceInfos_.size();
         return MIDI_STATUS_INSUFFICIENT_RESULT_SPACE;
     }
-    
+
     *numDevices = deviceInfos_.size();
     CHECK_AND_RETURN_RET(*numDevices != 0, MIDI_STATUS_OK);
     CHECK_AND_RETURN_RET(infos != nullptr, MIDI_STATUS_GENERIC_INVALID_ARGUMENT);

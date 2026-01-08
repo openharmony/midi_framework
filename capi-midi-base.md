@@ -1,15 +1,3 @@
-没问题，我已经根据您的要求刷新了文档中的超链接。
-
-主要进行了以下调整：
-
-1. **修正跳转链接**：所有的类型（Types）、结构体（Structs）和枚举（Enums）在汇总表中都已添加 `#` 锚点，点击可直接跳转到文档下方的“详细说明”章节。
-2. **清理格式**：移除了参考文档中可能存在的重复链接格式错误（如 `[Link](#)[Link](#)`），确保格式整洁。
-3. **内部引用**：在回调函数的参数说明中，如果引用了本文档定义的结构体（如 `OH_MidiEvent`），也添加了内部跳转链接。
-
----
-
-# Midi
-
 ## 概述
 
 Midi模块提供MIDI（乐器数字接口）功能的C语言API接口定义。
@@ -44,65 +32,11 @@ Midi模块提供MIDI（乐器数字接口）功能的C语言API接口定义。
 
 | 名称 | 描述 |
 | --- | --- |
-| [OH_MidiStatusCode](#oh_midistatuscode) {<br>
-
-<br>MIDI_STATUS_OK = 0,<br>
-
-<br>MIDI_STATUS_GENERIC_INVALID_ARGUMENT,<br>
-
-<br>MIDI_STATUS_GENERIC_IPC_FAILURE,<br>
-
-<br>MIDI_STATUS_INSUFFICIENT_RESULT_SPACE,<br>
-
-<br>MIDI_STATUS_INVALID_CLIENT,<br>
-
-<br>MIDI_STATUS_INVALID_DEVICE_HANDLE,<br>
-
-<br>MIDI_STATUS_INVALID_PORT,<br>
-
-<br>MIDI_STATUS_WOULD_BLOCK,<br>
-
-<br>MIDI_STATUS_TIMEOUT,<br>
-
-<br>MIDI_STATUS_TOO_MANY_OPEN_DEVICES,<br>
-
-<br>MIDI_STATUS_TOO_MANY_OPEN_PORTS,<br>
-
-<br>MIDI_STATUS_DEVICE_ALREADY_OPEN,<br>
-
-<br>MIDI_STATUS_SERVICE_DIED,<br>
-
-<br>MIDI_STATUS_UNKNOWN_ERROR = -1<br>
-
-<br>} | Midi状态码。 |
-| [OH_MidiPortDirection](#oh_midiportdirection) {<br>
-
-<br>MIDI_PORT_DIRECTION_INPUT = 1,<br>
-
-<br>MIDI_PORT_DIRECTION_OUTPUT = 2<br>
-
-<br>} | 端口方向。 |
-| [OH_MidiProtocol](#oh_midiprotocol) {<br>
-
-<br>MIDI_PROTOCOL_1_0 = 1,<br>
-
-<br>MIDI_PROTOCOL_2_0 = 2<br>
-
-<br>} | Midi传输协议语义。 |
-| [OH_MidiDeviceType](#oh_mididevicetype) {<br>
-
-<br>MIDI_DEVICE_TYPE_USB = 0,<br>
-
-<br>MIDI_DEVICE_TYPE_BLE = 1<br>
-
-<br>} | Midi设备类型。 |
-| [OH_MidiDeviceChangeAction](#oh_mididevicechangeaction) {<br>
-
-<br>MIDI_DEVICE_CHANGE_ACTION_CONNECTED = 0,<br>
-
-<br>MIDI_DEVICE_CHANGE_ACTION_DISCONNECTED = 1<br>
-
-<br>} | 设备连接状态变化动作。 |
+| [OH_MidiStatusCode](#oh_midistatuscode) | Midi状态码。 |
+| [OH_MidiPortDirection](#oh_midiportdirection) | 端口方向。 |
+| [OH_MidiProtocol](#oh_midiprotocol) | Midi传输协议语义。 |
+| [OH_MidiDeviceType](#oh_mididevicetype) | Midi设备类型。 |
+| [OH_MidiDeviceChangeAction](#oh_mididevicechangeaction) | 设备连接状态变化动作。 |
 
 ## 类型定义说明
 
@@ -193,7 +127,7 @@ typedef struct OH_MidiEvent OH_MidiEvent
 
 **描述**
 
-定义通用Midi事件结构。设计用于处理UMP（通用MIDI数据包）。
+定义通用Midi事件结构。设计用于处理原始字节流（Midi 1.0）和UMP（通用MIDI数据包）。
 
 **起始版本：** 24
 
@@ -367,7 +301,7 @@ enum OH_MidiDeviceType
 | 枚举值 | 描述 |
 | --- | --- |
 | MIDI_DEVICE_TYPE_USB | USB设备。 |
-| MIDI_DEVICE_TYPE_BLE | 蓝牙BLE设备。 |
+| MIDI_DEVICE_TYPE_BLE | 蓝牙低功耗（BLE）设备。 |
 
 ### OH_MidiPortDirection
 
@@ -398,25 +332,14 @@ enum OH_MidiProtocol
 
 此枚举定义Midi传输协议语义。
 
+**注意**：无论选择何种协议，SDK始终使用 **UMP (Universal Midi Packet, 通用MIDI数据包)** 格式进行数据传输。此枚举定义连接的“行为”和“语义”，而非数据结构。
+
 **起始版本：** 24
 
 | 枚举值 | 描述 |
 | --- | --- |
-| MIDI_PROTOCOL_1_0 | **传统Midi 1.0 语义。**<br>
-
-<br>**行为：**<br>
-
-<br>- 期望接收声音通道信息为Midi1.0的ump包（类型2）。<br>
-
-| MIDI_PROTOCOL_2_0 | **Midi 2.0 语义。**<br>
-
-<br>**行为：**<br>
-
-<br>- 期望接收声音通道信息为Midi2.0的高精度ump包（类型4）。<br>
-
-<br>- 启用高分辨率数据、单音符控制器（Per-Note Controllers）。<br>
-
-<br>**注意**：回退策略：如果请求此协议但硬件仅支持Midi 1.0，服务将执行“尽力而为”的转换（例如将32位力度值降级为7位，将Type 4转换为Type 2）。可能会丢失部分数据精度。 |
+| MIDI_PROTOCOL_1_0 | **传统Midi 1.0 语义。** 服务期望严格兼容Midi 1.0的UMP数据包。支持的消息类型包括：**MT 0x0**（工具消息/JR时间戳）、**MT 0x1**（系统实时和系统通用消息）、**MT 0x2**（32位 Midi 1.0 通道声音消息）、**MT 0x3**（用于7位SysEx负载的64位数据消息）。硬件处理：如果目标硬件是Midi 1.0，服务将UMP转换回字节流；如果是Midi 2.0，则按原样发送。 |
+| MIDI_PROTOCOL_2_0 | **Midi 2.0 语义。** 服务期望利用Midi 2.0特性的UMP数据包。兼容以上1.0的数据包外，还支持的消息类型包括：**MT 0x4**（64位 Midi 2.0 高精度通道声音消息）、**MT 0x0**（工具消息）、**MT 0xD**（128位 Flex Data消息）、**MT 0xF**（128位 UMP流消息）、**MT 0x3/MT 0x5**（数据消息）。**回退策略：** 如果硬件仅支持Midi 1.0，服务将执行“尽力而为”的转换（例如降低精度、Type 4转Type 2），部分数据可能丢失。 |
 
 ### OH_MidiStatusCode
 

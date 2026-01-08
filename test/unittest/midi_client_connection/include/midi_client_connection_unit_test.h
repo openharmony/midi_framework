@@ -13,15 +13,14 @@
  * limitations under the License.
  */
 
-#ifndef MIDI_SHARED_RING_UNIT_TEST_H
-#define MIDI_SHARED_RING_UNIT_TEST_H
+#ifndef MIDI_CLIENT_CONNECTION_UNIT_TEST_H
+#define MIDI_CLIENT_CONNECTION_UNIT_TEST_H
 
 #include "gtest/gtest.h"
-#include "midi_shared_ring.h"
 
 namespace OHOS {
 namespace MIDI {
-class MidiSharedRingUnitTest : public testing::Test {
+class MidiClientConnectionUnitTest : public testing::Test {
 public:
     // SetUpTestCase: Called before all test cases
     static void SetUpTestCase(void);

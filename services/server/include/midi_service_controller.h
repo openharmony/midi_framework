@@ -41,25 +41,25 @@ public:
     std::unordered_set<int32_t> clients;
     std::unordered_map<int64_t, std::shared_ptr<DeviceConnectionForInput>> inputDeviceconnections_;
 };
-
 class MidiServiceController {
 public:
     MidiServiceController();
     ~MidiServiceController();
-    static MidiServiceController* GetInstance();
+    static MidiServiceController *GetInstance();
     void Init();
-    int32_t CreateClientInServer(std::shared_ptr<MidiServiceCallback> callback, sptr<IRemoteObject>& client, uint32_t &clientId);
+    int32_t CreateClientInServer(std::shared_ptr<MidiServiceCallback> callback, sptr<IRemoteObject> &client,
+                                 uint32_t &clientId);
     std::vector<std::map<int32_t, std::string>> GetDevices();
     std::vector<std::map<int32_t, std::string>> GetDevicePorts(int64_t deviceId);
     int32_t OpenDevice(uint32_t clientId, int64_t deviceId);
     int32_t CloseDevice(uint32_t clientId, int64_t deviceId);
-    int32_t OpenInputPort(uint32_t clientId,
-                            std::shared_ptr<SharedMidiRing> &buffer,
-                            int64_t deviceId, uint32_t portIndex);
+    int32_t OpenInputPort(uint32_t clientId, std::shared_ptr<SharedMidiRing> &buffer, int64_t deviceId,
+                          uint32_t portIndex);
     int32_t CloseInputPort(uint32_t clientId, int64_t deviceId, uint32_t portIndex);
     int32_t DestroyMidiClient(uint32_t clientId);
     void NotifyDeviceChange(DeviceChangeType change, DeviceInformation devices);
     void NotifyError(int32_t code);
+
 private:
     void ClosePortforDevice(uint32_t clientId, int64_t deviceId, std::shared_ptr<DeviceClientContext> deviceClientContext);
     int32_t CloseInputPortInner(uint32_t clientId, int64_t deviceId, uint32_t portIndex);

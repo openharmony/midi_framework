@@ -35,9 +35,11 @@ public:
     OH_MidiStatusCode OpenDevice(int64_t deviceId) override;
     OH_MidiStatusCode CloseDevice(int64_t deviceId) override;
     OH_MidiStatusCode GetDevicePorts(int64_t deviceId, std::vector<std::map<int32_t, std::string>> &portInfos) override;
-    OH_MidiStatusCode OpenInputPort(std::shared_ptr<SharedMidiRing> &buffer, int64_t deviceId, uint32_t portIndex) override;
+    OH_MidiStatusCode OpenInputPort(std::shared_ptr<SharedMidiRing> &buffer, int64_t deviceId,
+                                    uint32_t portIndex) override;
     OH_MidiStatusCode CloseInputPort(int64_t deviceId, uint32_t portIndex) override;
     OH_MidiStatusCode DestroyMidiClient() override;
+
 private:
     sptr<IIpcMidiClientInServer> ipc_;
     sptr<MidiCallbackStub> callback_;
