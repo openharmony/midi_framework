@@ -381,16 +381,9 @@ void DeviceConnectionForOutput::CollectDueEventsFromClientHeaps()
     const auto clientsSnapshot = SnapshotClients();  // todo: make clientsSnapshot be clientsSnapshot_
     auto now = std::chrono::steady_clock::now();
 
-    while (true) {
-        std::chrono::steady_clock::time_point earliestDueTime{};
-        auto earliestClient = FindClientWithEarliestDue(clientsSnapshot, earliestDueTime);
-        if (!earliestClient) {
-            break;
-        }
-        if (earliestDueTime > now) {  // todo: earliestDueTime  > now + 1, new a function
-            break;
-        }
-
+    std::chrono::steady_clock::time_point earliestDueTime{};
+    auto earliestClient = FindClientWithEarliestDue(clientsSnapshot, earliestDueTime);
+    while (earliestClient != nullptr && earliestDueTime <= now) {
         ClientConnectionInServer::PendingEvent dueEvent;
         if (!earliestClient->PopPendingTop(dueEvent)) {
             break;
@@ -400,10 +393,9 @@ void DeviceConnectionForOutput::CollectDueEventsFromClientHeaps()
 
         if (!TryAppendToSendCache(payload)) {
             FlushSendCacheToDriver();
+            TryAppendToSendCache(payload);
         }
-        if (!TryAppendToSendCache(payload)) {  // todo: no need if, send directly
-            SendToDriver(payload);
-        }
+        SendToDriver(payload);
 
         now = std::chrono::steady_clock::now();
     }
