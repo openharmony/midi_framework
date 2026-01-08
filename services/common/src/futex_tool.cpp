@@ -4,7 +4,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,8 @@ namespace MIDI {
 namespace {
 const int32_t WAIT_TRY_COUNT = 50;
 const int64_t SEC_TO_NANOSEC = 1000000000;
-} // namespace
+}  // namespace
+
 // FUTEX_WAIT using relative timeout value.
 void TimeoutToRelativeTime(int64_t timeout, struct timespec &realtime)
 {
@@ -42,7 +43,8 @@ void TimeoutToRelativeTime(int64_t timeout, struct timespec &realtime)
     realtime.tv_sec = timeoutSec;
 }
 
-FutexCode FutexTool::FutexWait(std::atomic<uint32_t> *futexPtr, int64_t timeout, const std::function<bool(void)> &pred)
+// Helper: Validate input parameters
+FutexCode CheckWaitParams(std::atomic<uint32_t> *futexPtr, const std::function<bool(void)> &pred)
 {
     CHECK_AND_RETURN_RET_LOG(futexPtr != nullptr, FUTEX_INVALID_PARAMS, "futexPtr is null");
     CHECK_AND_RETURN_RET_LOG(pred, FUTEX_INVALID_PARAMS, "pred err");
@@ -51,15 +53,58 @@ FutexCode FutexTool::FutexWait(std::atomic<uint32_t> *futexPtr, int64_t timeout,
         MIDI_ERR_LOG("failed: invalid param:%{public}u", current);
         return FUTEX_INVALID_PARAMS;
     }
+    return FUTEX_SUCCESS;
+}
+
+// Helper: Calculate remaining wait time. Returns false if timeout occurred.
+bool RecalculateWaitTime(int64_t timeout, int64_t timeIn, struct timespec &waitTime)
+{
+    if (timeout <= 0) {
+        return true;
+    }
+    int64_t cost = ClockTime::GetCurNano() - timeIn;
+    if (cost >= timeout) {
+        return false;
+    }
+    TimeoutToRelativeTime(timeout - cost, waitTime);
+    return true;
+}
+
+// Helper: Execute the actual syscall
+FutexCode ExecFutexWaitSyscall(std::atomic<uint32_t> *futexPtr, int64_t timeout, struct timespec *waitTimePtr)
+{
+    long res = syscall(__NR_futex, futexPtr, FUTEX_WAIT, IS_NOT_READY, waitTimePtr, NULL, 0);
+    auto sysErr = errno;
+
+    if ((res != 0) && (sysErr == ETIMEDOUT)) {
+        MIDI_WARNING_LOG("wait:%{public}" PRId64 "ns timeout, result:%{public}ld sysErr[%{public}d]:%{public}s",
+            timeout,
+            res,
+            sysErr,
+            strerror(sysErr));
+        return FUTEX_TIMEOUT;
+    }
+
+    if ((res != 0) && (sysErr != EAGAIN)) {
+        MIDI_WARNING_LOG("result:%{public}ld, sysErr[%{public}d]:%{public}s", res, sysErr, strerror(sysErr));
+    }
+    // EAGAIN or Success are treated as continuation or success in caller
+    return FUTEX_SUCCESS;
+}
+
+FutexCode FutexTool::FutexWait(std::atomic<uint32_t> *futexPtr, int64_t timeout, const std::function<bool(void)> &pred)
+{
+    FutexCode checkRet = CheckWaitParams(futexPtr, pred);
+    if (checkRet != FUTEX_SUCCESS) {
+        return checkRet;
+    }
 
     int64_t timeIn = ClockTime::GetCurNano();
-    int64_t cost = 0;
     struct timespec waitTime;
     if (timeout > 0) {
         TimeoutToRelativeTime(timeout, waitTime);
     }
 
-    long res = 0;
     int32_t tryCount = 0;
     while (tryCount < WAIT_TRY_COUNT) {
         uint32_t expect = IS_READY;
@@ -74,35 +119,22 @@ FutexCode FutexTool::FutexWait(std::atomic<uint32_t> *futexPtr, int64_t timeout,
             return FUTEX_SUCCESS;
         }
 
-        cost = ClockTime::GetCurNano() - timeIn;
-        if (cost >= timeout && timeout > 0) {
+        if (!RecalculateWaitTime(timeout, timeIn, waitTime)) {
             return FUTEX_TIMEOUT;
         }
-        if (cost < timeout && timeout > 0) {
-            TimeoutToRelativeTime(timeout - cost, waitTime);
-        }
 
-        res = syscall(__NR_futex, futexPtr, FUTEX_WAIT, IS_NOT_READY, (timeout <= 0 ? NULL : &waitTime), NULL, 0);
-        auto sysErr = errno;
+        FutexCode sysRet = ExecFutexWaitSyscall(futexPtr, timeout, (timeout <= 0 ? NULL : &waitTime));
+        if (sysRet == FUTEX_TIMEOUT) {
+            return FUTEX_TIMEOUT;
+        }
 
         if (pred()) {
             return FUTEX_SUCCESS;
         }
-
-        if ((res != 0) && (sysErr == ETIMEDOUT)) {
-            MIDI_WARNING_LOG("wait:%{public}" PRId64 "ns timeout, result:%{public}ld sysErr[%{public}d]:%{public}s",
-                             timeout, res, sysErr, strerror(sysErr));
-            return FUTEX_TIMEOUT;
-        }
-
-        if ((res != 0) && (sysErr != EAGAIN)) {
-            MIDI_WARNING_LOG("result:%{public}ld, sysErr[%{public}d]:%{public}s", res, sysErr, strerror(sysErr));
-        }
         tryCount++;
     }
-    if (tryCount >= WAIT_TRY_COUNT) {
-        MIDI_ERR_LOG("too much spurious wake-up");
-    }
+
+    MIDI_ERR_LOG("too much spurious wake-up");
     return FUTEX_OPERATION_FAILED;
 }
 
@@ -129,5 +161,5 @@ FutexCode FutexTool::FutexWake(std::atomic<uint32_t> *futexPtr, uint32_t wakeVal
     }
     return FUTEX_SUCCESS;
 }
-} // namespace MIDI
-} // namespace OHOS
+}  // namespace MIDI
+}  // namespace OHOS

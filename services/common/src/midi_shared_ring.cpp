@@ -42,7 +42,7 @@ namespace {
 const uint32_t MAX_MMAP_BUFFER_SIZE = 0x2000;
 static constexpr int INVALID_FD = -1;
 static constexpr int MINFD = 2;
-} // namespace
+}  // namespace
 
 class MidiSharedMemoryImpl : public MidiSharedMemory {
 public:
@@ -72,7 +72,8 @@ private:
 
 class ScopedFd {
 public:
-    explicit ScopedFd(int fd) : fd_(fd) {}
+    explicit ScopedFd(int fd) : fd_(fd)
+    {}
     ~ScopedFd()
     {
         if (fd_ > MINFD) {
@@ -93,8 +94,8 @@ MidiSharedMemoryImpl::MidiSharedMemoryImpl(size_t size, const std::string &name)
 MidiSharedMemoryImpl::MidiSharedMemoryImpl(int fd, size_t size, const std::string &name)
     : base_(nullptr), fd_(dup(fd)), size_(size), name_(name)
 {
-    MIDI_DEBUG_LOG("MidiSharedMemory ctor with fd %{public}d size %{public}zu name %{public}s", fd_, size_,
-                   name_.c_str());
+    MIDI_DEBUG_LOG(
+        "MidiSharedMemory ctor with fd %{public}d size %{public}zu name %{public}s", fd_, size_, name_.c_str());
 }
 
 MidiSharedMemoryImpl::~MidiSharedMemoryImpl()
@@ -105,20 +106,21 @@ MidiSharedMemoryImpl::~MidiSharedMemoryImpl()
 
 int32_t MidiSharedMemoryImpl::Init()
 {
-    CHECK_AND_RETURN_RET_LOG((size_ > 0 && size_ < MAX_MMAP_BUFFER_SIZE), MIDI_STATUS_GENERIC_INVALID_ARGUMENT,
-                             "Init falied: size out of range: %{public}zu", size_);
+    CHECK_AND_RETURN_RET_LOG((size_ > 0 && size_ < MAX_MMAP_BUFFER_SIZE),
+        MIDI_STATUS_GENERIC_INVALID_ARGUMENT,
+        "Init falied: size out of range: %{public}zu",
+        size_);
     bool isFromRemote = false;
     if (fd_ >= 0) {
         if (fd_ == STDIN_FILENO || fd_ == STDOUT_FILENO || fd_ == STDERR_FILENO) {
             MIDI_WARNING_LOG("fd is special fd: %{public}d", fd_);
         }
         isFromRemote = true;
-        int size = AshmemGetSize(fd_); // hdi fd may not support
+        int size = AshmemGetSize(fd_);  // hdi fd may not support
         if (size < 0 || static_cast<size_t>(size) != size_) {
             MIDI_WARNING_LOG("AshmemGetSize faied, get %{public}d", size);
         }
-    }
-    else {
+    } else {
         fd_ = AshmemCreate(name_.c_str(), size_);
         if (fd_ == STDIN_FILENO || fd_ == STDOUT_FILENO || fd_ == STDERR_FILENO) {
             MIDI_WARNING_LOG("fd is special fd: %{public}d", fd_);
@@ -127,8 +129,8 @@ int32_t MidiSharedMemoryImpl::Init()
     }
 
     void *addr = mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_SHARED, fd_, 0);
-    CHECK_AND_RETURN_RET_LOG(addr != MAP_FAILED, MIDI_STATUS_UNKNOWN_ERROR,
-                             "Init falied: fd %{public}d size %{public}zu", fd_, size_);
+    CHECK_AND_RETURN_RET_LOG(
+        addr != MAP_FAILED, MIDI_STATUS_UNKNOWN_ERROR, "Init falied: fd %{public}d size %{public}zu", fd_, size_);
     base_ = static_cast<uint8_t *>(addr);
     MIDI_DEBUG_LOG("Init %{public}s <%{public}s> done.", (isFromRemote ? "remote" : "local"), name_.c_str());
     return MIDI_STATUS_OK;
@@ -159,13 +161,25 @@ void MidiSharedMemoryImpl::Close()
     }
 }
 
-uint8_t *MidiSharedMemoryImpl::GetBase() { return base_; }
+uint8_t *MidiSharedMemoryImpl::GetBase()
+{
+    return base_;
+}
 
-size_t MidiSharedMemoryImpl::GetSize() { return size_; }
+size_t MidiSharedMemoryImpl::GetSize()
+{
+    return size_;
+}
 
-std::string MidiSharedMemoryImpl::GetName() { return name_; }
+std::string MidiSharedMemoryImpl::GetName()
+{
+    return name_;
+}
 
-int MidiSharedMemoryImpl::GetFd() { return fd_; }
+int MidiSharedMemoryImpl::GetFd()
+{
+    return fd_;
+}
 
 std::shared_ptr<MidiSharedMemory> MidiSharedMemory::CreateFromLocal(size_t size, const std::string &name)
 {
@@ -176,24 +190,27 @@ std::shared_ptr<MidiSharedMemory> MidiSharedMemory::CreateFromLocal(size_t size,
 
 std::shared_ptr<MidiSharedMemory> MidiSharedMemory::CreateFromRemote(int fd, size_t size, const std::string &name)
 {
-    int minfd = 2; // ignore stdout, stdin and stderr.
+    int minfd = 2;  // ignore stdout, stdin and stderr.
     CHECK_AND_RETURN_RET_LOG(fd > minfd, nullptr, "CreateFromRemote failed: invalid fd: %{public}d", fd);
     std::shared_ptr<MidiSharedMemoryImpl> sharedMemory = std::make_shared<MidiSharedMemoryImpl>(fd, size, name);
     if (sharedMemory->Init() != MIDI_STATUS_OK) {
-        MIDI_ERR_LOG("CreateFromRemote failed"); // todo：替换成midi log
+        MIDI_ERR_LOG("CreateFromRemote failed");  // todo：替换成midi log
         return nullptr;
     }
     return sharedMemory;
 }
 
-bool MidiSharedMemory::Marshalling(Parcel &parcel) const { return true; }
+bool MidiSharedMemory::Marshalling(Parcel &parcel) const
+{
+    return true;
+}
 
 MidiSharedMemory *MidiSharedMemory::Unmarshalling(Parcel &parcel)
 {
     // Parcel -> MessageParcel
     MessageParcel &msgParcel = static_cast<MessageParcel &>(parcel);
     int fd = msgParcel.ReadFileDescriptor();
-    int minfd = 2; // ignore stdout, stdin and stderr.
+    int minfd = 2;  // ignore stdout, stdin and stderr.
     CHECK_AND_RETURN_RET_LOG(fd > minfd, nullptr, "CreateFromRemote failed: invalid fd: %{public}d", fd);
     ScopedFd scopedFd(fd);
 
@@ -203,8 +220,9 @@ MidiSharedMemory *MidiSharedMemory::Unmarshalling(Parcel &parcel)
 
     off_t actualSize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
-    CHECK_AND_RETURN_RET_LOG((actualSize == (off_t)size) && size != 0, nullptr,
-                             "CreateFromRemote failed: actualSize is not equal to declareSize");
+    CHECK_AND_RETURN_RET_LOG((actualSize == (off_t)size) && size != 0,
+        nullptr,
+        "CreateFromRemote failed: actualSize is not equal to declareSize");
 
     std::string name = msgParcel.ReadString();
 
@@ -224,7 +242,10 @@ MidiSharedMemory *MidiSharedMemory::Unmarshalling(Parcel &parcel)
 
 //==================== Ring Math ====================//
 // 保留 1 字节空槽（区分空/满）
-inline uint32_t RingUsed(uint32_t r, uint32_t w, uint32_t cap) { return (w >= r) ? (w - r) : (cap - (r - w)); }
+inline uint32_t RingUsed(uint32_t r, uint32_t w, uint32_t cap)
+{
+    return (w >= r) ? (w - r) : (cap - (r - w));
+}
 
 inline uint32_t RingFree(uint32_t r, uint32_t w, uint32_t cap)
 {
@@ -232,7 +253,10 @@ inline uint32_t RingFree(uint32_t r, uint32_t w, uint32_t cap)
     return (cap - 1u) - used;
 }
 
-inline bool IsValidOffset(uint32_t off, uint32_t cap) { return off < cap; }
+inline bool IsValidOffset(uint32_t off, uint32_t cap)
+{
+    return off < cap;
+}
 
 //==================== SharedMidiRing Public ====================//
 
@@ -243,12 +267,12 @@ SharedMidiRing::SharedMidiRing(uint32_t ringCapacityBytes) : capacity_(ringCapac
 
 int32_t SharedMidiRing::Init(int dataFd)
 {
-    CHECK_AND_RETURN_RET_LOG(totalMemorySize_ <= MAX_MMAP_BUFFER_SIZE, MIDI_STATUS_GENERIC_INVALID_ARGUMENT,
-                             "failed: invalid totalMemorySize_");
+    CHECK_AND_RETURN_RET_LOG(totalMemorySize_ <= MAX_MMAP_BUFFER_SIZE,
+        MIDI_STATUS_GENERIC_INVALID_ARGUMENT,
+        "failed: invalid totalMemorySize_");
     if (dataFd == INVALID_FD) {
         dataMem_ = MidiSharedMemory::CreateFromLocal(totalMemorySize_, "midi_shared_buffer");
-    }
-    else {
+    } else {
         dataMem_ = MidiSharedMemory::CreateFromRemote(dataFd, totalMemorySize_, "midi_shared_buffer");
     }
     base_ = dataMem_->GetBase();
@@ -276,7 +300,7 @@ std::shared_ptr<SharedMidiRing> SharedMidiRing::CreateFromRemote(size_t ringCapa
 {
     MIDI_DEBUG_LOG("dataFd %{public}d", dataFd);
 
-    int minfd = 2; // ignore stdout, stdin and stderr.
+    int minfd = 2;  // ignore stdout, stdin and stderr.
     CHECK_AND_RETURN_RET_LOG(dataFd > minfd, nullptr, "invalid dataFd: %{public}d", dataFd);
 
     std::shared_ptr<SharedMidiRing> buffer = std::make_shared<SharedMidiRing>(ringCapacityBytes);
@@ -301,7 +325,7 @@ SharedMidiRing *SharedMidiRing::Unmarshalling(Parcel &parcel)
     uint32_t ringSize = messageParcel.ReadUint32();
     int dataFd = messageParcel.ReadFileDescriptor();
 
-    int minfd = 2; // ignore stdout, stdin and stderr.
+    int minfd = 2;  // ignore stdout, stdin and stderr.
     CHECK_AND_RETURN_RET_LOG(dataFd > minfd, nullptr, "invalid dataFd: %{public}d", dataFd);
 
     auto buffer = new (std::nothrow) SharedMidiRing(ringSize);
@@ -321,15 +345,30 @@ SharedMidiRing *SharedMidiRing::Unmarshalling(Parcel &parcel)
     return buffer;
 }
 
-uint32_t SharedMidiRing::GetCapacity() const { return capacity_; }
+uint32_t SharedMidiRing::GetCapacity() const
+{
+    return capacity_;
+}
 
-uint32_t SharedMidiRing::GetReadPosition() const { return controler_->readPosition.load(); }
+uint32_t SharedMidiRing::GetReadPosition() const
+{
+    return controler_->readPosition.load();
+}
 
-uint32_t SharedMidiRing::GetWritePosition() const { return controler_->writePosition.load(); }
+uint32_t SharedMidiRing::GetWritePosition() const
+{
+    return controler_->writePosition.load();
+}
 
-uint8_t *SharedMidiRing::GetDataBase() { return ringBase_; }
+uint8_t *SharedMidiRing::GetDataBase()
+{
+    return ringBase_;
+}
 
-bool SharedMidiRing::IsEmpty() const { return GetReadPosition() == GetWritePosition(); }
+bool SharedMidiRing::IsEmpty() const
+{
+    return GetReadPosition() == GetWritePosition();
+}
 
 std::atomic<uint32_t> *SharedMidiRing::GetFutex()
 {
@@ -339,7 +378,10 @@ std::atomic<uint32_t> *SharedMidiRing::GetFutex()
     return &controler_->futexObj;
 }
 
-ControlHeader *SharedMidiRing::GetControlHeader() { return controler_; }
+ControlHeader *SharedMidiRing::GetControlHeader()
+{
+    return controler_;
+}
 
 FutexCode SharedMidiRing::WaitFor(int64_t timeoutInNs, const std::function<bool(void)> &pred)
 {
@@ -353,7 +395,10 @@ void SharedMidiRing::WakeFutex(uint32_t wakeVal)
     }
 }
 
-void SharedMidiRing::NotifyConsumer(uint32_t wakeVal) { WakeFutex(wakeVal); }
+void SharedMidiRing::NotifyConsumer(uint32_t wakeVal)
+{
+    WakeFutex(wakeVal);
+}
 
 //==================== Write Side ====================//
 
@@ -363,8 +408,8 @@ MidiStatusCode SharedMidiRing::TryWriteEvent(const MidiEventInner &event, bool n
     return TryWriteEvents(&event, 1, &written, notify);
 }
 
-MidiStatusCode SharedMidiRing::TryWriteEvents(const MidiEventInner *events, uint32_t eventCount,
-                                              uint32_t *eventsWritten, bool notify)
+MidiStatusCode SharedMidiRing::TryWriteEvents(
+    const MidiEventInner *events, uint32_t eventCount, uint32_t *eventsWritten, bool notify)
 {
     if (eventsWritten) {
         *eventsWritten = 0;
@@ -446,8 +491,8 @@ void SharedMidiRing::CommitRead(const PeekedEvent &ev)
     controler_->readPosition.store(end);
 }
 
-void SharedMidiRing::DrainToBatch(std::vector<MidiEvent> &outEvents,
-                                  std::vector<std::vector<uint32_t>> &outPayloadBuffers, uint32_t maxEvents)
+void SharedMidiRing::DrainToBatch(
+    std::vector<MidiEvent> &outEvents, std::vector<std::vector<uint32_t>> &outPayloadBuffers, uint32_t maxEvents)
 {
     uint32_t count = 0;
     while (maxEvents == 0 || count < maxEvents) {
@@ -489,9 +534,6 @@ MidiStatusCode SharedMidiRing::ValidateWriteArgs(const MidiEventInner *events, u
 
 bool SharedMidiRing::ValidateOneEvent(const MidiEventInner &event) const
 {
-    // if (event.length > 0 && event.data == nullptr) { // to be deleted
-    //     return false;
-    // }
     CHECK_AND_RETURN_RET_LOG(event.data != nullptr, false, "invalid event!");
 
     if (event.length > (std::numeric_limits<size_t>::max() / sizeof(uint32_t))) {
@@ -503,8 +545,8 @@ bool SharedMidiRing::ValidateOneEvent(const MidiEventInner &event) const
     return true;
 }
 
-MidiStatusCode SharedMidiRing::TryWriteOneEvent(const MidiEventInner &event, uint32_t totalBytes, uint32_t readIndex,
-                                                uint32_t &writeIndex)
+MidiStatusCode SharedMidiRing::TryWriteOneEvent(
+    const MidiEventInner &event, uint32_t totalBytes, uint32_t readIndex, uint32_t &writeIndex)
 {
     const uint32_t freeSize = RingFree(readIndex, writeIndex, capacity_);
     CHECK_AND_RETURN_RET(freeSize >= totalBytes, MidiStatusCode::WOULD_BLOCK);
@@ -575,18 +617,18 @@ MidiStatusCode SharedMidiRing::UpdateReadIndexIfNeed(uint32_t &readIndex, uint32
 MidiStatusCode SharedMidiRing::HandleWrapIfNeeded(const ShmMidiEventHeader &header, uint32_t &readIndex)
 {
     if ((header.flags & SHM_EVENT_FLAG_WRAP) == 0) {
-        return MidiStatusCode::WOULD_BLOCK; // no wrap
+        return MidiStatusCode::WOULD_BLOCK;  // no wrap
     }
     if (header.length != 0) {
         return MidiStatusCode::SHM_BROKEN;
     }
     controler_->readPosition.store(0);
     readIndex = 0;
-    return MidiStatusCode::OK; // wrap, continue
+    return MidiStatusCode::OK;  // wrap, continue
 }
 
-MidiStatusCode SharedMidiRing::BuildPeekedEvent(const ShmMidiEventHeader &header, uint32_t readIndex,
-                                                PeekedEvent &outEvent)
+MidiStatusCode SharedMidiRing::BuildPeekedEvent(
+    const ShmMidiEventHeader &header, uint32_t readIndex, PeekedEvent &outEvent)
 {
     const uint32_t needed = static_cast<uint32_t>(sizeof(ShmMidiEventHeader) + header.length * sizeof(uint32_t));
     if (needed > (capacity_ - 1u)) {
@@ -602,7 +644,7 @@ MidiStatusCode SharedMidiRing::BuildPeekedEvent(const ShmMidiEventHeader &header
     outEvent.length = header.length;
     outEvent.beginOffset = readIndex;
 
-    uint32_t end = readIndex + needed; // end = (r + needed) % capacity_;
+    uint32_t end = readIndex + needed;  // end = (r + needed) % capacity_;
     if (end == capacity_) {
         end = 0;
     }
@@ -628,5 +670,5 @@ MidiEvent SharedMidiRing::CopyOut(const PeekedEvent &peekedEvent, std::vector<ui
     event.data = outPayloadBuffer.data();
     return event;
 }
-} // namespace MIDI
-} // namespace OHOS
+}  // namespace MIDI
+}  // namespace OHOS

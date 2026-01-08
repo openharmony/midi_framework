@@ -26,8 +26,10 @@ using namespace testing::ext;
 
 class MidiServiceControllerUnitTest : public testing::Test {
 public:
-    static void SetUpTestCase() {}
-    static void TearDownTestCase() {}
+    static void SetUpTestCase()
+    {}
+    static void TearDownTestCase()
+    {}
 
     void SetUp() override
     {
@@ -76,8 +78,9 @@ public:
         controller_->deviceManager_.UpdateDevices();
 
         auto allDevices = controller_->deviceManager_.GetDevices();
-        if (allDevices.empty())
+        if (allDevices.empty()) {
             return -1;
+        }
         return allDevices[0].deviceId;
     }
 
@@ -302,7 +305,7 @@ HWTEST_F(MidiServiceControllerUnitTest, CloseDevice002, TestSize.Level0)
 
 /**
  * @tc.name: CloseDevice003
- * @tc.desc: Two different clients open and Close the same device 
+ * @tc.desc: Two different clients open and Close the same device
  * @tc.type: FUNC
  */
 HWTEST_F(MidiServiceControllerUnitTest, CloseDevice003, TestSize.Level0)
@@ -316,12 +319,11 @@ HWTEST_F(MidiServiceControllerUnitTest, CloseDevice003, TestSize.Level0)
     std::shared_ptr<MockMidiServiceCallback> cb2 = std::make_shared<MockMidiServiceCallback>();
     controller_->CreateClientInServer(cb2, clientObj, clientId2);
 
-    EXPECT_CALL(*rawMockDriver_, OpenDevice(driverId))
-        .WillOnce(Return(MIDI_STATUS_OK));
+    EXPECT_CALL(*rawMockDriver_, OpenDevice(driverId)).WillOnce(Return(MIDI_STATUS_OK));
 
     controller_->OpenDevice(clientId_, deviceId);
     controller_->OpenDevice(clientId2, deviceId);
-   
+
     int32_t ret = controller_->CloseDevice(clientId_, deviceId);
     EXPECT_EQ(ret, MIDI_STATUS_OK);
     auto it = controller_->deviceClientContexts_.find(deviceId);
@@ -337,7 +339,6 @@ HWTEST_F(MidiServiceControllerUnitTest, CloseDevice003, TestSize.Level0)
     EXPECT_EQ(it2, controller_->deviceClientContexts_.end());
     controller_->DestroyMidiClient(clientId2);
 }
-
 
 /**
  * @tc.name: OpenInputPort001
@@ -362,7 +363,6 @@ HWTEST_F(MidiServiceControllerUnitTest, OpenInputPort001, TestSize.Level0)
     auto &inputPortConnections = it->second->inputDeviceconnections_;
     auto inputPort = inputPortConnections.find(portIndex);
     EXPECT_NE(inputPort, inputPortConnections.end());
-
 }
 
 /**
@@ -392,7 +392,7 @@ HWTEST_F(MidiServiceControllerUnitTest, OpenInputPort003, TestSize.Level0)
     int64_t driverId = 201;
     int64_t deviceId = SimulateDeviceConnection(driverId, "Midi Controller");
     uint32_t portIndex = 0;
-    
+
     uint32_t clientId2 = 0;
     sptr<IRemoteObject> clientObj;
     std::shared_ptr<MockMidiServiceCallback> cb2 = std::make_shared<MockMidiServiceCallback>();
@@ -401,8 +401,7 @@ HWTEST_F(MidiServiceControllerUnitTest, OpenInputPort003, TestSize.Level0)
     EXPECT_CALL(*rawMockDriver_, OpenDevice(driverId)).WillOnce(Return(MIDI_STATUS_OK));
     controller_->OpenDevice(clientId_, deviceId);
 
-    EXPECT_CALL(*rawMockDriver_, OpenInputPort(driverId, portIndex, _))
-        .WillOnce(Return(MIDI_STATUS_OK));
+    EXPECT_CALL(*rawMockDriver_, OpenInputPort(driverId, portIndex, _)).WillOnce(Return(MIDI_STATUS_OK));
 
     std::shared_ptr<SharedMidiRing> buffer;
     int32_t ret = controller_->OpenInputPort(clientId_, buffer, deviceId, portIndex);
@@ -422,7 +421,7 @@ HWTEST_F(MidiServiceControllerUnitTest, OpenInputPort004, TestSize.Level0)
     int64_t driverId = 201;
     int64_t deviceId = SimulateDeviceConnection(driverId, "Midi Controller");
     uint32_t portIndex = 0;
-    
+
     uint32_t clientId2 = 0;
     sptr<IRemoteObject> clientObj;
     std::shared_ptr<MockMidiServiceCallback> cb2 = std::make_shared<MockMidiServiceCallback>();
@@ -432,8 +431,7 @@ HWTEST_F(MidiServiceControllerUnitTest, OpenInputPort004, TestSize.Level0)
     controller_->OpenDevice(clientId_, deviceId);
     controller_->OpenDevice(clientId2, deviceId);
 
-    EXPECT_CALL(*rawMockDriver_, OpenInputPort(driverId, portIndex, _))
-        .WillOnce(Return(MIDI_STATUS_OK));
+    EXPECT_CALL(*rawMockDriver_, OpenInputPort(driverId, portIndex, _)).WillOnce(Return(MIDI_STATUS_OK));
 
     std::shared_ptr<SharedMidiRing> buffer;
     int32_t ret = controller_->OpenInputPort(clientId_, buffer, deviceId, portIndex);
@@ -487,7 +485,7 @@ HWTEST_F(MidiServiceControllerUnitTest, CloseInputPort002, TestSize.Level0)
     int64_t driverId = 300;
     int64_t deviceId = SimulateDeviceConnection(driverId, "Midi Key");
     uint32_t portIndex = 0;
-        
+
     uint32_t clientId2 = 0;
     sptr<IRemoteObject> clientObj;
     std::shared_ptr<MockMidiServiceCallback> cb2 = std::make_shared<MockMidiServiceCallback>();
@@ -507,11 +505,10 @@ HWTEST_F(MidiServiceControllerUnitTest, CloseInputPort002, TestSize.Level0)
     auto &inputPortConnections = it->second->inputDeviceconnections_;
     auto inputPort = inputPortConnections.find(portIndex);
     EXPECT_NE(inputPort, inputPortConnections.end());
-    EXPECT_CALL(*rawMockDriver_, CloseInputPort(driverId, portIndex))
-        .WillOnce(Return(MIDI_STATUS_OK));
+    EXPECT_CALL(*rawMockDriver_, CloseInputPort(driverId, portIndex)).WillOnce(Return(MIDI_STATUS_OK));
     ret = controller_->CloseInputPort(clientId2, deviceId, portIndex);
     EXPECT_EQ(ret, MIDI_STATUS_OK);
-    
+
     auto it2 = controller_->deviceClientContexts_.find(deviceId);
     auto &inputPortConnections2 = it2->second->inputDeviceconnections_;
     auto inputPort2 = inputPortConnections2.find(portIndex);

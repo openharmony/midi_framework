@@ -56,7 +56,7 @@ public:
     bool WaitForAtLeast(uint32_t expectedCount, std::chrono::milliseconds timeout)
     {
         std::unique_lock<std::mutex> lock(mutex_);
-        return condition_.wait_for(lock, timeout, [&]() { return receivedCount_ >= expectedCount; });
+        return condition_.wait_for(lock, timeout, [this, expectedCount]() { return receivedCount_ >= expectedCount; });
     }
 
     uint32_t GetReceivedCount() const
@@ -93,7 +93,7 @@ static void MidiReceivedTrampoline(void *userData, const OH_MidiEvent *events, s
     }
 }
 
-} // namespace
+}  // namespace
 
 class MidiServiceMock : public MidiServiceInterface {
 public:
@@ -102,9 +102,9 @@ public:
     MOCK_METHOD(OH_MidiStatusCode, OpenDevice, (int64_t deviceId), (override));
     MOCK_METHOD(OH_MidiStatusCode, CloseDevice, (int64_t deviceId), (override));
     MOCK_METHOD(OH_MidiStatusCode, GetDevicePorts,
-                (int64_t deviceId, (std::vector<std::map<int32_t, std::string>>)&portInfos), (override));
+        (int64_t deviceId, (std::vector<std::map<int32_t, std::string>>)&portInfos), (override));
     MOCK_METHOD(OH_MidiStatusCode, OpenInputPort,
-                ((std::shared_ptr<SharedMidiRing>)&buffer, int64_t deviceId, uint32_t portIndex), (override));
+        ((std::shared_ptr<SharedMidiRing>)&buffer, int64_t deviceId, uint32_t portIndex), (override));
     MOCK_METHOD(OH_MidiStatusCode, CloseInputPort, (int64_t deviceId, uint32_t portIndex), (override));
     MOCK_METHOD(OH_MidiStatusCode, DestroyMidiClient, (), (override));
 };
@@ -154,20 +154,20 @@ HWTEST_F(MidiClientUnitTest, GetDevices_001, TestSize.Level0)
     // 1. Prepare mock data from IPC
     EXPECT_CALL(*mockService, GetDevices(_)).WillOnce(Invoke([](std::vector<std::map<int32_t, std::string>> &infos) {
         infos.push_back({{DEVICE_ID, "1001"},
-                         {DEVICE_TYPE, "0"},
-                         {MIDI_PROTOCOL, "1"},
-                         {PRODUCT_NAME, "Mock_Piano"},
-                         {VENDOR_NAME, "Huawei"}});
+            {DEVICE_TYPE, "0"},
+            {MIDI_PROTOCOL, "1"},
+            {PRODUCT_NAME, "Mock_Piano"},
+            {VENDOR_NAME, "MockVendor_1"}});
         infos.push_back({{DEVICE_ID, "1002"},
-                         {DEVICE_TYPE, "1"},
-                         {MIDI_PROTOCOL, "1"},
-                         {PRODUCT_NAME, "Mock_Drum"},
-                         {VENDOR_NAME, "Huawei"}});
+            {DEVICE_TYPE, "1"},
+            {MIDI_PROTOCOL, "1"},
+            {PRODUCT_NAME, "Mock_Drum"},
+            {VENDOR_NAME, "MockVendor_2"}});
         return MIDI_STATUS_OK;
     }));
     OH_MidiCallbacks callbacks;
-    callbacks.onDeviceChange = [](void *userData, OH_MidiDeviceChangeAction action,
-                                  OH_MidiDeviceInformation deviceInfo) {};
+    callbacks.onDeviceChange =
+        [](void *userData, OH_MidiDeviceChangeAction action, OH_MidiDeviceInformation deviceInfo) {};
     callbacks.onError = [](void *userData, OH_MidiStatusCode code) {
 
     };
@@ -184,12 +184,12 @@ HWTEST_F(MidiClientUnitTest, GetDevices_001, TestSize.Level0)
     EXPECT_EQ(infoArray[0].deviceType, MIDI_DEVICE_TYPE_USB);
     EXPECT_EQ(infoArray[0].nativeProtocol, MIDI_PROTOCOL_1_0);
     EXPECT_STREQ(infoArray[0].productName, "Mock_Piano");
-    EXPECT_STREQ(infoArray[0].vendorName, "Huawei");
+    EXPECT_STREQ(infoArray[0].vendorName, "MockVendor_1");
     EXPECT_EQ(infoArray[1].midiDeviceId, 1002);
     EXPECT_EQ(infoArray[1].deviceType, MIDI_DEVICE_TYPE_BLE);
     EXPECT_EQ(infoArray[1].nativeProtocol, MIDI_PROTOCOL_1_0);
     EXPECT_STREQ(infoArray[1].productName, "Mock_Drum");
-    EXPECT_STREQ(infoArray[1].vendorName, "Huawei");
+    EXPECT_STREQ(infoArray[1].vendorName, "MockVendor_2");
 }
 
 /**
@@ -201,26 +201,26 @@ HWTEST_F(MidiClientUnitTest, GetDevices_002, TestSize.Level0)
 {
     EXPECT_CALL(*mockService, GetDevices(_)).WillOnce(Invoke([](std::vector<std::map<int32_t, std::string>> &infos) {
         infos.push_back({{DEVICE_ID, "1001"},
-                         {DEVICE_TYPE, "0"},
-                         {MIDI_PROTOCOL, "1"},
-                         {PRODUCT_NAME, "Mock_Piano"},
-                         {VENDOR_NAME, "Huawei"}});
+            {DEVICE_TYPE, "0"},
+            {MIDI_PROTOCOL, "1"},
+            {PRODUCT_NAME, "Mock_Piano"},
+            {VENDOR_NAME, "MockVendor_1"}});
         infos.push_back({{DEVICE_ID, "1002"},
-                         {DEVICE_TYPE, "1"},
-                         {MIDI_PROTOCOL, "1"},
-                         {PRODUCT_NAME, "Mock_Drum"},
-                         {VENDOR_NAME, "Huawei"}});
+            {DEVICE_TYPE, "1"},
+            {MIDI_PROTOCOL, "1"},
+            {PRODUCT_NAME, "Mock_Drum"},
+            {VENDOR_NAME, "MockVendor_2"}});
         return MIDI_STATUS_OK;
     }));
     OH_MidiCallbacks callbacks;
-    callbacks.onDeviceChange = [](void *userData, OH_MidiDeviceChangeAction action,
-                                  OH_MidiDeviceInformation deviceInfo) {};
+    callbacks.onDeviceChange =
+        [](void *userData, OH_MidiDeviceChangeAction action, OH_MidiDeviceInformation deviceInfo) {};
     callbacks.onError = [](void *userData, OH_MidiStatusCode code) {
 
     };
     void *userData = nullptr;
     client->Init(callbacks, userData);
-    OH_MidiDeviceInformation infoArrayTest[1]; // Only 1 slot
+    OH_MidiDeviceInformation infoArrayTest[1];  // Only 1 slot
     size_t numDevices = 1;
     OH_MidiStatusCode status = client->GetDevices(infoArrayTest, &numDevices);
 
@@ -238,12 +238,12 @@ HWTEST_F(MidiClientUnitTest, GetDevices_002, TestSize.Level0)
     EXPECT_EQ(infoArray[0].deviceType, MIDI_DEVICE_TYPE_USB);
     EXPECT_EQ(infoArray[0].nativeProtocol, MIDI_PROTOCOL_1_0);
     EXPECT_STREQ(infoArray[0].productName, "Mock_Piano");
-    EXPECT_STREQ(infoArray[0].vendorName, "Huawei");
+    EXPECT_STREQ(infoArray[0].vendorName, "MockVendor_1");
     EXPECT_EQ(infoArray[1].midiDeviceId, 1002);
     EXPECT_EQ(infoArray[1].deviceType, MIDI_DEVICE_TYPE_BLE);
     EXPECT_EQ(infoArray[1].nativeProtocol, MIDI_PROTOCOL_1_0);
     EXPECT_STREQ(infoArray[1].productName, "Mock_Drum");
-    EXPECT_STREQ(infoArray[1].vendorName, "Huawei");
+    EXPECT_STREQ(infoArray[1].vendorName, "MockVendor_2");
 }
 
 /**
@@ -258,11 +258,11 @@ HWTEST_F(MidiClientUnitTest, GetDevicePorts_001, TestSize.Level0)
     EXPECT_CALL(*mockService, GetDevicePorts(deviceId, _))
         .WillOnce(Invoke([](int64_t id, std::vector<std::map<int32_t, std::string>> &ports) {
             ports.push_back({{PORT_INDEX, "0"},
-                             {DIRECTION, "0"}, // Input
-                             {PORT_NAME, "Midi_In_Port"}});
+                {DIRECTION, "0"},  // Input
+                {PORT_NAME, "Midi_In_Port"}});
             ports.push_back({{PORT_INDEX, "1"},
-                             {DIRECTION, "1"}, // Output
-                             {PORT_NAME, "Midi_Out_Port"}});
+                {DIRECTION, "1"},  // Output
+                {PORT_NAME, "Midi_Out_Port"}});
             return MIDI_STATUS_OK;
         }));
     OH_MidiPortInformation portArray[2];
@@ -427,7 +427,7 @@ HWTEST_F(MidiClientUnitTest, MidiInputPort_StartStop_001, TestSize.Level0)
     {
         MidiInputPort inputPort(nullptr, &callbackCapture);
         EXPECT_FALSE(inputPort.StartReceiverThread());
-        EXPECT_TRUE(inputPort.StopReceiverThread()); // should be safe even if never started
+        EXPECT_TRUE(inputPort.StopReceiverThread());  // should be safe even if never started
     }
 
     // 2) ringBuffer is nullptr -> Start should fail
@@ -436,7 +436,7 @@ HWTEST_F(MidiClientUnitTest, MidiInputPort_StartStop_001, TestSize.Level0)
         // ringBuffer_ is nullptr by default
         EXPECT_FALSE(inputPort.StartReceiverThread());
         EXPECT_TRUE(inputPort.StopReceiverThread());
-        EXPECT_TRUE(inputPort.StopReceiverThread()); // idempotent
+        EXPECT_TRUE(inputPort.StopReceiverThread());  // idempotent
     }
 }
 

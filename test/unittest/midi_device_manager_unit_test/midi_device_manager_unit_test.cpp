@@ -26,9 +26,11 @@ using namespace testing::ext;
 
 class MidiDeviceManagerUnitTest : public testing::Test {
 public:
-    static void SetUpTestCase() {}
+    static void SetUpTestCase()
+    {}
 
-    static void TearDownTestCase() {}
+    static void TearDownTestCase()
+    {}
 
     void SetUp() override
     {
@@ -68,7 +70,6 @@ private:
  */
 HWTEST_F(MidiDeviceManagerUnitTest, GetDevices001, TestSize.Level0)
 {
-
     EXPECT_CALL(*rawUsbDriver_, GetRegisteredDevices()).WillOnce(Return(std::vector<DeviceInformation>{}));
 
     manager_->UpdateDevices();

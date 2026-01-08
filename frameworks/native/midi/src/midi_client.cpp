@@ -65,13 +65,19 @@ static bool ConvertToDeviceInformation(
 
     it = deviceInfo.find(PRODUCT_NAME);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "productName error");
-    strncpy(outInfo.productName, it->second.c_str(), sizeof(outInfo.productName) - 1);
-    outInfo.productName[sizeof(outInfo.productName) - 1] = '\0';
+    CHECK_AND_RETURN_RET_LOG(
+        strncpy_s(outInfo.productName, sizeof(outInfo.productName), it->second.c_str(), it->second.length()) ==
+            MIDI_STATUS_OK,
+        false,
+        "copy productName failed");
 
     it = deviceInfo.find(VENDOR_NAME);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "vendorName error");
-    strncpy(outInfo.vendorName, it->second.c_str(), sizeof(outInfo.vendorName) - 1);
-    outInfo.vendorName[sizeof(outInfo.vendorName) - 1] = '\0';
+    CHECK_AND_RETURN_RET_LOG(
+        strncpy_s(outInfo.vendorName, sizeof(outInfo.vendorName), it->second.c_str(), it->second.length()) ==
+            MIDI_STATUS_OK,
+        false,
+        "copy vendorName failed");
     return true;
 }
 
@@ -92,8 +98,11 @@ static bool ConvertToPortInformation(
 
     it = portInfo.find(PORT_NAME);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end() && !it->second.empty(), false, "port name error");
-    strncpy(outInfo.name, it->second.c_str(), sizeof(outInfo.name) - 1);
-    outInfo.name[sizeof(outInfo.name) - 1] = '\0';
+
+    CHECK_AND_RETURN_RET_LOG(
+        strncpy_s(outInfo.name, sizeof(outInfo.name), it->second.c_str(), it->second.length()) == MIDI_STATUS_OK,
+        false,
+        "copy port name failed");
     return true;
 }
 

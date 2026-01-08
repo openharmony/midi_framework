@@ -313,25 +313,21 @@ void DeviceConnectionForOutput::DrainSingleClientRing(ClientConnectionInServer &
         return;
     }
     SharedMidiRing &clientRing = *ringShared;
-
-    while (true) {
-        SharedMidiRing::PeekedEvent ringEvent{};
-        const auto status = clientRing.PeekNext(ringEvent);
-
+    SharedMidiRing::PeekedEvent ringEvent{};
+    MidiStatusCode status = MidiStatusCode::OK;
+    while ((status = clientRing.PeekNext(ringEvent)) == MidiStatusCode::OK) {
         if (status == MidiStatusCode::WOULD_BLOCK) {  // todo: no need
             break;
         }
         if (status != MidiStatusCode::OK) {
             break;
         }
-
         if (ringEvent.timestamp == 0) {  // todo: use func and judge if timestamp + 1 < now
             if (!ConsumeRealtimeEvent(clientRing, ringEvent)) {
                 break;
             }
             continue;
         }
-
         if (!ConsumeNonRealtimeEvent(clientConnection, clientRing, ringEvent)) {
             // 堆满/入堆失败：不 CommitRead，保留共享内存，停止读取该 client
             break;
@@ -476,8 +472,6 @@ void DeviceConnectionForOutput::FlushSendCacheToDriver()
 
 void DeviceConnectionForOutput::SendToDriver(const std::vector<uint8_t> &payload)
 {
-    // TODO:
-    // GetInfo().driver->SendUmpOutput(GetInfo().deviceId, GetInfo().portIndex, payload.data(), payload.size());
     (void)payload;
 }
 
