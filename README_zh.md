@@ -19,7 +19,7 @@ midi_framework部件主要具备以下功能：
 | ------------------- | -------------------------------------------------------------------------------------------------------------- |
 | **MIDI客户端**      | 提供MIDI客户端创建、销毁及回调注册的接口，是应用与服务交互的入口。                                             |
 | **设备发现与管理**  | 提供当前系统连接的MIDI设备枚举、设备信息查询及USB设备热插拔事件监听接口。                                      |
-| **连接会话管理**    | 管理应用端与服务端的连接会话，处理输入/输出端口（Port）的打开、关闭及多客户端路由分发逻辑。                    |
+| **连接会话管理**    | 管理应用端与服务端的连接会话，处理端口（Port）的打开、关闭及多客户端路由分发逻辑。                             |
 | **数据传输**        | 基于共享内存与无锁环形队列（Shared Ring Buffer）实现跨进程的高性能MIDI数据传输。                               |
 | **协议处理器**      | 用于处理MIDI 2.0（UMP）与MIDI 1.0（Byte Stream）之间的协议解析与自动转换。                                     |
 | **USB设备适配**     | 负责与底层ALSA驱动交互，实现标准USB MIDI设备的指令读写与控制。                                                 |
@@ -37,7 +37,7 @@ midi_framework部件主要具备以下功能：
 │   └── native
 │       ├── midi                           # MIDI客户端核心逻辑 (Client Context)
 │       ├── midiutils                      # 基础工具库
-│       └── ohmidi                         # Native API (NDK) 接口实现
+│       └── ohmidi                         # Native API 接口实现
 ├── interfaces                             # 接口定义
 │   ├── inner_api                          # 系统内部接口头文件 (C++ Client)
 │   └── kits                               # 对外接口头文件 (Native C API)
@@ -89,9 +89,105 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 | **OH_MidiGetDevices**     | 获取当前系统已连接的MIDI设备列表及设备详细信息。 |
 | **OH_MidiOpenDevice**     | 打开指定的MIDI设备，建立连接会话。               |
 | **OH_MidiCloseDevice**    | 关闭已打开的MIDI设备，断开连接。                 |
-| **OH_MidiGetDevicePorts** | 获取指定设备的输入端口信息。                     |
+| **OH_MidiGetDevicePorts** | 获取指定设备的端口信息。                         |
 | **OH_MidiOpenInputPort**  | 打开设备的指定输入端口，准备接收MIDI数据。       |
-| **OH_MidiClosePort**      | 关闭指定的输入或输出端口，停止数据传输。         |
+| **OH_MidiClosePort**      | 关闭指定的输入端口，停止数据传输。               |
+
+### 使用说明
+
+以下主要演示使用 Native API 开发 MIDI 应用的基本流程，包含客户端创建、设备发现、端口打开（接收数据）及资源释放。
+
+#### 开发步骤
+
+1. **创建客户端**：初始化 MIDI 客户端上下文。
+2. **发现设备**：获取系统当前连接的 MIDI 设备列表。
+3. **打开设备与端口**：建立设备连接并打开指定端口。
+4. **数据交互**：通过回调函数接收数据。
+5. **释放资源**：使用完毕后关闭端口、设备并销毁客户端。
+
+#### 代码示例
+
+```cpp
+#include <midi/native_midi.h>
+#include <vector>
+#include <iostream>
+
+// 定义接收 MIDI 数据的回调函数
+void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t eventCount) {
+    for (size_t i = 0; i < eventCount; ++i) {
+        // 处理接收到的 MIDI 事件
+        // events[i].data, events[i].timestamp 等
+    }
+}
+
+void MidiDemo() {
+    // 1. 创建 MIDI 客户端
+    OH_MidiClient *client = nullptr;
+    // 系统级回调（如设备热插拔），此处暂不注册
+    OH_MidiCallbacks callbacks = {nullptr, nullptr};
+    OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
+    if (ret != MIDI_STATUS_OK) {
+        return; // 创建失败处理
+    }
+
+    // 2. 获取设备列表
+    // 2.1 先获取设备数量
+    size_t devCount = 0;
+    OH_MidiGetDevices(client, nullptr, &devCount);
+
+    if (devCount > 0) {
+        // 2.2 分配内存并获取设备详情
+        std::vector<OH_MidiDeviceInformation> devices(devCount);
+        OH_MidiGetDevices(client, devices.data(), &devCount);
+
+        // 3. 打开第一个设备 (示例)
+        OH_MidiDevice *device = nullptr;
+        int64_t targetDeviceId = devices[0].midiDeviceId;
+        ret = OH_MidiOpenDevice(client, targetDeviceId, &device);
+
+        if (ret == MIDI_STATUS_OK && device != nullptr) {
+            // 4. 获取端口信息
+            size_t portCount = 0;
+            OH_MidiGetDevicePorts(device, nullptr, &portCount);
+
+            if (portCount > 0) {
+                std::vector<OH_MidiPortInformation> ports(portCount);
+                OH_MidiGetDevicePorts(device, ports.data(), &portCount);
+
+                // 5. 遍历并打开输入端口
+                for (const auto& port : ports) {
+                    if (port.direction == MIDI_PORT_DIRECTION_INPUT) {
+                        OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_1_0};
+
+                        // 注册接收回调，打开端口
+                        ret = OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr);
+                        if (ret == MIDI_STATUS_OK) {
+                            // 端口打开成功，此时可以接收数据
+                            // ... 业务逻辑 ...
+
+                            // 6. 关闭端口
+                            OH_MidiClosePort(device, port.portIndex);
+                        }
+                    }
+                }
+            }
+            // 7. 关闭设备
+            OH_MidiCloseDevice(device);
+        }
+    }
+
+    // 8. 销毁客户端
+    OH_MidiClientDestroy(client);
+    client = nullptr;
+}
+
+```
+
+#### 注意事项
+
+* **内存获取模式**：`OH_MidiGetDevices` 和 `OH_MidiGetDevicePorts` 均采用“两次调用”模式。第一次传入 `nullptr` 获取数量，第二次传入分配好的缓冲区获取实际数据。
+* **回调限制**：`OnMidiReceived` 回调函数运行在非 UI 线程，请勿直接在回调中执行耗时操作或直接操作 UI 控件。
+* **端口方向**：在打开端口前，务必通过 `OH_MidiPortInformation.direction` 确认端口方向（`MIDI_PORT_DIRECTION_INPUT` 或 `MIDI_PORT_DIRECTION_OUTPUT`），错误的打开方式会导致 `MIDI_STATUS_INVALID_PORT` 错误。
 
 ## 相关仓
 
