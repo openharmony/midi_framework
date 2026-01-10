@@ -1,4 +1,4 @@
-# MIDI组件<a name="ZH-CN_TOPIC_MIDI_001"></a>
+# midi_framework部件<a name="ZH-CN_TOPIC_MIDI_001"></a>
 
 * [简介](#section_intro)
 * [基本概念](#section_concepts)
