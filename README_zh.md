@@ -133,7 +133,7 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 
 以下演示使用 Native API 开发 MIDI 应用的完整流程，包含客户端创建、热插拔监听、设备发现、数据收发及资源释放。
 
-1. **创建客户端**：初始化 MIDI 客户端上下文，并注册设备热插拔回调。
+1. **创建客户端**：初始化 MIDI 客户端上下文，并注册设备热插拔回调及服务异常回调。
 2. **发现设备与端口**：获取当前连接的设备列表，并查询设备的端口能力。
 3. **打开设备**：建立设备连接会话。
 4. **打开端口**：根据端口方向（Input/Output）分别打开端口。
@@ -160,7 +160,13 @@ void OnDeviceChange(void *userData, OH_MidiDeviceChangeAction action, OH_MidiDev
     }
 }
 
-// 2. 定义数据接收回调
+// 2. 定义服务错误回调
+// 当 MIDI 服务发生严重错误（如服务崩溃）时触发，建议此时重建客户端
+void OnError(void *userData, OH_MidiStatusCode code) {
+    printf("[Error] Critical Service Error occurred! Code=%d. Client may need recreation.\n", code);
+}
+
+// 3. 定义数据接收回调
 // 注意：OH_MidiEvent 中的 data 是 uint32_t* 类型，指向 UMP 数据包
 void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t eventCount) {
     for (size_t i = 0; i < eventCount; ++i) {
