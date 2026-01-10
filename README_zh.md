@@ -116,128 +116,150 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 
 **表 2** 接口说明
 
-| 接口名称                  | 功能描述                                         |
-| ------------------------- | ------------------------------------------------ |
-| **OH_MidiClientCreate**   | 创建MIDI客户端实例，初始化上下文环境。           |
-| **OH_MidiClientDestroy**  | 销毁MIDI客户端实例，释放相关资源。               |
-| **OH_MidiGetDevices**     | 获取当前系统已连接的MIDI设备列表及设备详细信息。 |
-| **OH_MidiOpenDevice**     | 打开指定的MIDI设备，建立连接会话。               |
-| **OH_MidiCloseDevice**    | 关闭已打开的MIDI设备，断开连接。                 |
-| **OH_MidiGetDevicePorts** | 获取指定设备的端口信息。                         |
-| **OH_MidiOpenInputPort**  | 打开设备的指定输入端口，准备接收MIDI数据。       |
-| **OH_MidiOpenOutputPort** | 打开设备的指定输出端口，准备发送MIDI数据。       |
-| **OH_MidiSend**           | 向指定输出端口发送MIDI数据。                     |
-| **OH_MidiClosePort**      | 关闭指定的输入/输出端口，停止数据传输。          |
+| 接口名称                  | 功能描述                                                             |
+| ------------------------- | -------------------------------------------------------------------- |
+| **OH_MidiClientCreate**   | 创建MIDI客户端实例，初始化上下文环境，并可注册设备热插拔及错误回调。 |
+| **OH_MidiClientDestroy**  | 销毁MIDI客户端实例，释放相关资源。                                   |
+| **OH_MidiGetDevices**     | 获取当前系统已连接的MIDI设备列表及设备详细信息。                     |
+| **OH_MidiGetDevicePorts** | 获取指定设备的端口信息。                                             |
+| **OH_MidiOpenDevice**     | 打开指定的MIDI设备，建立连接会话。                                   |
+| **OH_MidiCloseDevice**    | 关闭已打开的MIDI设备，断开连接。                                     |
+| **OH_MidiOpenInputPort**  | 打开设备的指定输入端口，准备接收MIDI数据。                           |
+| **OH_MidiOpenOutputPort** | 打开设备的指定输出端口，准备发送MIDI数据。                           |
+| **OH_MidiSend**           | 向指定输出端口发送MIDI数据。                                         |
+| **OH_MidiClosePort**      | 关闭指定的输入或输出端口，停止数据传输。                             |
 
 ### 开发步骤<a name="section_steps"></a>
 
-可以使用此仓库内提供的 Native API 接口实现 MIDI 设备访问。以下步骤描述了如何开发一个基础的 MIDI 数据接收功能：
+以下演示使用 Native API 开发 MIDI 应用的完整流程，包含客户端创建、热插拔监听、设备发现、数据收发及资源释放。
 
-1. 使用 **OH_MidiClientCreate** 接口创建客户端实例。
-```cpp
-OH_MidiClient *client = nullptr;
-OH_MidiCallbacks callbacks = {nullptr, nullptr}; // 系统回调暂为空
-OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
+1. **创建客户端**：初始化 MIDI 客户端上下文，并注册设备热插拔回调。
+2. **发现设备与端口**：获取当前连接的设备列表，并查询设备的端口能力。
+3. **打开设备**：建立设备连接会话。
+4. **打开端口**：根据端口方向（Input/Output）分别打开端口。
+5. **数据交互**：
+* **接收**：通过回调函数接收 UMP 格式的 MIDI 数据。
+* **发送**：构建 UMP 数据包并通过 Output 端口发送。
+6. **释放资源**：使用完毕后关闭端口、设备并销毁客户端。
 
-```
-
-
-2. 使用 **OH_MidiGetDevices** 接口获取连接的设备列表。
-> **注意**：该接口采用两次调用模式。第一次调用获取设备数量，第二次调用获取实际数据。
-
+#### 代码示例
 
 ```cpp
-size_t devCount = 0;
-// 第一次调用：获取数量
-OH_MidiGetDevices(client, nullptr, &devCount);
+#include <midi/native_midi.h>
+#include <vector>
+#include <iostream>
+#include <thread>
+#include <chrono>
 
-if (devCount > 0) {
-    std::vector<OH_MidiDeviceInformation> devices(devCount);
-    // 第二次调用：获取详情
-    OH_MidiGetDevices(client, devices.data(), &devCount);
+// 1. 定义设备热插拔回调
+void OnDeviceChange(void *userData, OH_MidiDeviceChangeAction action, OH_MidiDeviceInformation info) {
+    if (action == MIDI_DEVICE_CHANGE_ACTION_CONNECTED) {
+        printf("[Hotplug] Device Connected: ID=%ld, Name=%s\n", info.midiDeviceId, info.name);
+    } else if (action == MIDI_DEVICE_CHANGE_ACTION_DISCONNECTED) {
+        printf("[Hotplug] Device Disconnected: ID=%ld\n", info.midiDeviceId);
+    }
 }
 
-```
-
-
-3. 使用 **OH_MidiGetDevicePorts** 获取指定设备的端口信息。
-
-
-```cpp
-int64_t targetDeviceId = devices[0].midiDeviceId;
-size_t portCount = 0;
-OH_MidiGetDevicePorts(client, targetDeviceId, nullptr, &portCount);
-std::vector<OH_MidiPortInformation> ports(portCount);
-OH_MidiGetDevicePorts(client, targetDeviceId, ports.data(), &portCount);
-
-```
-
-
-4. 使用 **OH_MidiOpenDevice** 打开指定设备，建立连接会话。
-```cpp
-OH_MidiDevice *device = nullptr;
-ret = OH_MidiOpenDevice(client, targetDeviceId, &device);
-
-```
-
-
-5. 定义数据接收回调函数，并使用 **OH_MidiOpenInputPort** 打开输入端口。
-> **重要**：无论在 `OH_MidiPortDescriptor` 中指定的是 `MIDI_PROTOCOL_1_0` 还是 `MIDI_PROTOCOL_2_0`，回调函数中接收到的数据 **始终为 UMP (Universal MIDI Packet) 格式**。SDK 会自动将传统的 MIDI 1.0 字节流封装为 UMP 包。
-
-
-```cpp
-// 回调函数实现
+// 2. 定义数据接收回调 (注意：接收到的始终为 UMP 格式数据)
 void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t eventCount) {
     for (size_t i = 0; i < eventCount; ++i) {
-        // events[i].data 包含 4~16字节(32位~128位) 的 UMP 数据包
-        // 即使是 MIDI 1.0 协议，数据也已封装在 UMP 中
+        // 示例：打印收到的第一个 64位 数据字
+        printf("[Rx] Timestamp=%llu, Data=0x%llX\n", events[i].timestamp, events[i].data[0]);
     }
 }
 
-// 在遍历端口时打开 Input 类型的端口
-if (ports[i].direction == MIDI_PORT_DIRECTION_INPUT) {
-    // 选择协议语义：
-    // MIDI_PROTOCOL_1_0: 服务端只投递兼容 MIDI 1.0 的 UMP 包
-    // MIDI_PROTOCOL_2_0: 服务端投递所有类型的 UMP 包
-    OH_MidiPortDescriptor desc = {ports[i].portIndex, MIDI_PROTOCOL_1_0};
-    OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr);
-}
+void MidiDemo() {
+    // 1. 创建 MIDI 客户端并注册回调
+    OH_MidiClient *client = nullptr;
+    OH_MidiCallbacks callbacks;
+    callbacks.onDeviceChange = OnDeviceChange;
+    callbacks.onError = nullptr;
 
-```
-
-6. 打开输出端口发送数据（可选）： 使用 OH_MidiOpenOutputPort 打开输出端口，并构建 UMP 数据包进行发送。
-```cpp
-// 打开输出端口
-if (ports[i].direction == MIDI_PORT_DIRECTION_OUTPUT) {
-    OH_MidiPortDescriptor desc = {ports[i].portIndex, MIDI_PROTOCOL_1_0};
-    OH_MidiOpenOutputPort(device, desc);
-
-    // 构建 UMP 数据包 (示例：发送 Note On)
-    // 即使是 MIDI 1.0 协议，也必须封装在 UMP 格式中 (Message Type 0x2)
-    OH_MidiEvent event;
-    event.timestamp = 0; // 0 表示立即发送
-    // 0x20903C64: MT=0x2(MIDI 1.0), Group=0, Status=0x90(NoteOn Ch1), Note=60, Vel=100
-    event.data[0] = 0x20903C64;
-
-    // 发送数据
-    uint32_t written = 0;
-    OH_MidiSend(device, ports[i].portIndex, &event, 1, &written);
-
-    if (written < 1) {
-        // 处理缓冲区满的情况
+    OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
+    if (ret != MIDI_STATUS_OK) {
+        printf("Failed to create client.\n");
+        return;
     }
+
+    // 2. 获取设备列表 (两次调用模式)
+    size_t devCount = 0;
+    OH_MidiGetDevices(client, nullptr, &devCount);
+
+    if (devCount > 0) {
+        std::vector<OH_MidiDeviceInformation> devices(devCount);
+        OH_MidiGetDevices(client, devices.data(), &devCount);
+
+        // 示例：操作列表中的第一个设备
+        int64_t targetDeviceId = devices[0].midiDeviceId;
+        printf("Target Device ID: %ld\n", targetDeviceId);
+
+        // 3. 获取端口信息 (无需 OpenDevice 即可查询)
+        size_t portCount = 0;
+        OH_MidiGetDevicePorts(client, targetDeviceId, nullptr, &portCount);
+
+        if (portCount > 0) {
+            std::vector<OH_MidiPortInformation> ports(portCount);
+            OH_MidiGetDevicePorts(client, targetDeviceId, ports.data(), &portCount);
+
+            // 4. 打开设备
+            OH_MidiDevice *device = nullptr;
+            ret = OH_MidiOpenDevice(client, targetDeviceId, &device);
+
+            if (ret == MIDI_STATUS_OK && device != nullptr) {
+                // 5. 遍历并打开端口
+                for (const auto& port : ports) {
+                    // --- 场景 A: 输入端口 (接收) ---
+                    if (port.direction == MIDI_PORT_DIRECTION_INPUT) {
+                        // 使用 MIDI 1.0 语义 (数据仍为 UMP 封装)
+                        OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_1_0};
+                        if (OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr) == MIDI_STATUS_OK) {
+                            printf("Input port %d opened.\n", port.portIndex);
+                        }
+                    }
+                    // --- 场景 B: 输出端口 (发送) ---
+                    else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
+                        OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_1_0};
+                        if (OH_MidiOpenOutputPort(device, desc) == MIDI_STATUS_OK) {
+                            printf("Output port %d opened. Sending data...\n", port.portIndex);
+
+                            // 构建 UMP 数据包 (示例: MIDI 1.0 Note On -> Channel 0, Note 60, Vel 100)
+                            // UMP Format (32-bit): [MT(4) | Group(4) | Status(8) | Note(8) | Vel(8)]
+                            // 0x20903C64 -> MT=0x2 (MIDI 1.0 Channel Voice)
+                            OH_MidiEvent event;
+                            event.timestamp = 0; // 0 表示立即发送
+                            event.data[0] = 0x20903C64;
+
+                            uint32_t written = 0;
+                            OH_MidiSend(device, port.portIndex, &event, 1, &written);
+                        }
+                    }
+                }
+
+                // 模拟业务运行，等待数据接收
+                std::this_thread::sleep_for(std::chrono::seconds(2));
+
+                // 6. 资源释放：关闭端口
+                for (const auto& port : ports) {
+                    OH_MidiClosePort(device, port.portIndex);
+                }
+                OH_MidiCloseDevice(device);
+            }
+        }
+    }
+
+    // 7. 销毁客户端
+    OH_MidiClientDestroy(client);
+    client = nullptr;
 }
 
 ```
 
-7. 数据处理完成后，依次调用 **OH_MidiClosePort**、**OH_MidiCloseDevice** 和 **OH_MidiClientDestroy** 释放资源。
-```cpp
-OH_MidiClosePort(device, inputPortIndex);
-OH_MidiClosePort(device, outputPortIndex);
-OH_MidiCloseDevice(device);
-OH_MidiClientDestroy(client);
+#### 注意事项
 
-```
+* **内存获取模式**：`OH_MidiGetDevices` 和 `OH_MidiGetDevicePorts` 均采用“两次调用”模式。第一次传入 `nullptr` 获取数量，第二次传入分配好的缓冲区获取实际数据。
+* **UMP 数据格式**：无论选择何种协议语义（Protocol Semantics），接口收发的数据**始终为 UMP (Universal MIDI Packet) 格式**。对于 MIDI 1.0 设备，SDK 会自动完成 UMP 与 Byte Stream 的转换。
+* **非阻塞发送**：`OH_MidiSend` 为非阻塞接口。如果底层缓冲区已满，该接口可能只发送部分数据，请务必检查 `eventsWritten` 返回值。
+* **回调限制**：`OnMidiReceived` 和 `OnDeviceChange` 回调函数运行在非 UI 线程，请勿直接在回调中执行耗时操作或操作 UI 控件。
 
 ## 支持设备<a name="section_devices"></a>
 
