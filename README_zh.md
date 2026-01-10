@@ -18,6 +18,11 @@
 
 midi_framework部件为OpenHarmony系统提供了统一的MIDI设备访问、数据传输及协议处理能力，使得应用能够直接调用系统提供的接口实现外部MIDI设备的发现、连接以及高性能的指令收发功能。
 
+midi_framework部件主要具备以下常见功能：
+
+* **设备发现与连接**：支持MIDI设备的枚举、信息查询、热插拔监听（USB MIDI设备）以及设备连接。
+* **数据传输**：支持基于UMP（Universal MIDI Packet）协议的高性能数据发送与接收。
+
 **图 1** MIDI组件架构图<a name="fig_midi_arch"></a>
 ![midi_framework部件架构图](figures/zh-cn_image_midi_framework.png)
 
@@ -120,7 +125,9 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 | **OH_MidiCloseDevice**    | 关闭已打开的MIDI设备，断开连接。                 |
 | **OH_MidiGetDevicePorts** | 获取指定设备的端口信息。                         |
 | **OH_MidiOpenInputPort**  | 打开设备的指定输入端口，准备接收MIDI数据。       |
-| **OH_MidiClosePort**      | 关闭指定的输入端口，停止数据传输。               |
+| **OH_MidiOpenOutputPort** | 打开设备的指定输出端口，准备发送MIDI数据。       |
+| **OH_MidiSend**           | 向指定输出端口发送MIDI数据。                     |
+| **OH_MidiClosePort**      | 关闭指定的端口，停止数据传输。                   |
 
 ### 开发步骤<a name="section_steps"></a>
 
@@ -198,9 +205,35 @@ if (ports[i].direction == MIDI_PORT_DIRECTION_INPUT) {
 
 ```
 
-6. 数据处理完成后，依次调用 **OH_MidiClosePort**、**OH_MidiCloseDevice** 和 **OH_MidiClientDestroy** 释放资源。
+6. 打开输出端口发送数据（可选）： 使用 OH_MidiOpenOutputPort 打开输出端口，并构建 UMP 数据包进行发送。
 ```cpp
-OH_MidiClosePort(device, portIndex);
+// 打开输出端口
+if (ports[i].direction == MIDI_PORT_DIRECTION_OUTPUT) {
+    OH_MidiPortDescriptor desc = {ports[i].portIndex, MIDI_PROTOCOL_1_0};
+    OH_MidiOpenOutputPort(device, desc);
+
+    // 构建 UMP 数据包 (示例：发送 Note On)
+    // 即使是 MIDI 1.0 协议，也必须封装在 UMP 格式中 (Message Type 0x2)
+    OH_MidiEvent event;
+    event.timestamp = 0; // 0 表示立即发送
+    // 0x20903C64: MT=0x2(MIDI 1.0), Group=0, Status=0x90(NoteOn Ch1), Note=60, Vel=100
+    event.data[0] = 0x20903C64;
+
+    // 发送数据
+    uint32_t written = 0;
+    OH_MidiSend(device, ports[i].portIndex, &event, 1, &written);
+
+    if (written < 1) {
+        // 处理缓冲区满的情况
+    }
+}
+
+```
+
+7. 数据处理完成后，依次调用 **OH_MidiClosePort**、**OH_MidiCloseDevice** 和 **OH_MidiClientDestroy** 释放资源。
+```cpp
+OH_MidiClosePort(device, inputPortIndex);
+OH_MidiClosePort(device, outputPortIndex);
 OH_MidiCloseDevice(device);
 OH_MidiClientDestroy(client);
 
