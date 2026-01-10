@@ -23,7 +23,7 @@ midi_framework部件主要具备以下常见功能：
 * **设备发现与连接**：支持MIDI设备的枚举、信息查询、热插拔监听（USB MIDI设备）以及设备连接。
 * **数据传输**：支持基于UMP（Universal MIDI Packet）协议的高性能数据发送与接收。
 
-**图 1** MIDI组件架构图<a name="fig_midi_arch"></a>
+**图 1** MIDI部件架构图<a name="fig_midi_arch"></a>
 ![midi_framework部件架构图](figures/zh-cn_image_midi_framework.png)
 
 ### 基本概念<a name="section_concepts"></a>
@@ -34,7 +34,7 @@ midi_framework部件主要具备以下常见功能：
 通用 MIDI 数据包。这是 MIDI 2.0 规范引入的一种基于 32 位字（Word）构建的全新数据格式。
 > **注意**：本部件采用 **UMP Native** 设计。无论底层硬件是 MIDI 1.0 还是 MIDI 2.0 设备，也无论应用层选择何种协议语义，**应用层收到的所有 MIDI 数据均为 UMP 格式**。对于 MIDI 1.0 设备，系统会自动将其数据封装为 UMP 数据包（Message Type 0x2 或 0x3）。
 
-* **协议语义 (Protocol Semantics)**
+* **协议语义 (Midi Protocol)**
 指 MIDI 连接在交互行为上的规则，而非数据格式。
 * **MIDI 1.0 语义**：限制数据传输仅使用 MIDI 1.0 兼容的消息类型（如 Note On/Off, Control Change），适用于需要与传统软件或硬件互通的场景。
 * **MIDI 2.0 语义**：允许使用高精度的 MIDI 2.0 消息（如 32-bit Velocity, Attribute Controller），适用于高性能音乐创作场景。
@@ -63,7 +63,7 @@ MIDI 设备上用于输入或输出数据的逻辑接口。一个 MIDI 设备可
 仓目录结构如下：
 
 ```
-/foundation/multimedia/midi_framework      # MIDI组件业务代码
+/foundation/multimedia/midi_framework      # MIDI部件业务代码
 ├── bundle.json                            # 部件描述与编译配置文件
 ├── config.gni                             # 编译配置参数
 ├── figures                                # 架构图等资源文件
