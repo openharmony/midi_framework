@@ -29,7 +29,7 @@ midi_framework部件主要具备以下常见功能：
 ### 基本概念<a name="section_concepts"></a>
 
 * **MIDI (Musical Instrument Digital Interface)**
-乐器数字接口，是电子乐器、计算机和其他音频设备之间交换音乐信息（如音符、控制参数等）的标准协议。
+乐器数字接口，是电子乐器、终端设备之间交换音乐信息（如音符、控制参数等）的标准协议。
 * **UMP (Universal MIDI Packet)**
 通用 MIDI 数据包。这是 MIDI 2.0 规范引入的一种基于 32 位字（Word）构建的数据格式。
 > **注意**：本部件采用 **UMP Native** 设计。无论底层硬件是 MIDI 1.0 还是 MIDI 2.0 设备，也无论应用层选择何种协议语义，**应用层收到的所有 MIDI 数据均为 UMP 格式**。对于 MIDI 1.0 设备，系统会自动将其数据封装为 UMP 数据包（Message Type 0x2 或 0x3）。
