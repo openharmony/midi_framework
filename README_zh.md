@@ -255,7 +255,7 @@ void MidiDemo() {
                 // 模拟业务运行，等待数据接收
                 std::this_thread::sleep_for(std::chrono::seconds(2));
 
-                // 6. 资源释放：关闭端口 (这里简化逻辑，实际应记录打开的端口索引)
+                // 6. 资源释放：关闭端口
                 for (const auto& port : ports) {
                     OH_MidiClosePort(device, port.portIndex);
                 }
