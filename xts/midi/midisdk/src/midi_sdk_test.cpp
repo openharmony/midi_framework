@@ -12,10 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "gtest/gtest.h"
-#include "native_midi.h"
 #include <iostream>
 #include <vector>
+#include <atomic>
+#include <fsteam>
+#include <queue>
+#include <string>
+#include <thread>
+#include "gtest/gtest.h"
+#include "native_midi.h"
 
 using namespace std;
 using namespace testing::ext;
@@ -27,7 +32,7 @@ protected:
     virtual void SetUp()
     {
         OH_MidiCallbacks callbacks = {nullptr, nullptr};
-        OH_MidiStatusCode ret = OH_MidiClient_Create(&client, callbacks, nullptr);
+        OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
         ASSERT_EQ(ret, MIDI_STATUS_OK);
         ASSERT_NE(client, nullptr);
     }
@@ -35,7 +40,7 @@ protected:
     virtual void TearDown()
     {
         if (client) {
-            OH_MidiClient_Destroy(client);
+            OH_MidiClientDestroy(client);
             client = nullptr;
         }
     }
@@ -58,7 +63,7 @@ protected:
 
 /**
  * @tc.number    : SUB_MULTIMEDIA_MIDI_CLIENT_0100
- * @tc.name      : Test OH_MidiClient_Create with valid parameters
+ * @tc.name      : Test OH_MidiClientCreate with valid parameters
  * @tc.desc      : Verify that a client can be created successfully.
  */
 HWTEST_F(MidiSdkTest, MidiClient_Create_001, Function | MediumTest | Level1) {
@@ -67,12 +72,12 @@ HWTEST_F(MidiSdkTest, MidiClient_Create_001, Function | MediumTest | Level1) {
 
 /**
  * @tc.number    : SUB_MULTIMEDIA_MIDI_CLIENT_0200
- * @tc.name      : Test OH_MidiClient_Create with nullptr
+ * @tc.name      : Test OH_MidiClientCreate with nullptr
  * @tc.desc      : Verify error handling when client pointer is null.
  */
 HWTEST_F(MidiSdkTest, MidiClient_Create_002, Function | MediumTest | Level1) {
     OH_MidiCallbacks callbacks = {nullptr, nullptr};
-    OH_MidiStatusCode ret = OH_MidiClient_Create(nullptr, callbacks, nullptr);
+    OH_MidiStatusCode ret = OH_MidiClientCreate(nullptr, callbacks, nullptr);
     EXPECT_EQ(ret, MIDI_STATUS_GENERIC_INVALID_ARGUMENT);
 }
 
@@ -306,7 +311,9 @@ HWTEST_F(MidiSdkTest, MidiOpenInputPort_Validation_001, Function | MediumTest | 
  */
 HWTEST_F(MidiSdkTest, MidiSendSysEx_001, Function | MediumTest | Level1) {
     int64_t devId = GetFirstDeviceId();
-    if (devId < 0) return;
+    if (devId < 0) {
+        return;
+    }
 
     OH_MidiDevice *device = nullptr;
     OH_MidiOpenDevice(client, devId, &device);
@@ -384,12 +391,12 @@ HWTEST_F(MidiSdkTest, MidiFlush_001, Function | MediumTest | Level1) {
 
 /**
  * @tc.number    : SUB_MULTIMEDIA_MIDI_DESTROY_0100
- * @tc.name      : Test OH_MidiClient_Destroy robustness
+ * @tc.name      : Test OH_MidiClientDestroy robustness
  * @tc.desc      : Verify destroying null or invalid clients.
  */
 HWTEST_F(MidiSdkTest, MidiClient_Destroy_Negative_001, Function | MediumTest | Level1) {
     // Case 1: Destroy Nullptr
-    OH_MidiStatusCode ret = OH_MidiClient_Destroy(nullptr);
+    OH_MidiStatusCode ret = OH_MidiClientDestroy(nullptr);
     EXPECT_EQ(ret, MIDI_STATUS_INVALID_CLIENT);
 
     // Case 2: Double Destroy is NOT safe to test directly if it crashes,
@@ -397,7 +404,7 @@ HWTEST_F(MidiSdkTest, MidiClient_Destroy_Negative_001, Function | MediumTest | L
     // In SetUp/TearDown pattern, client is destroyed at TearDown.
     // Here we manually destroy it to test success.
     if (client) {
-        ret = OH_MidiClient_Destroy(client);
+        ret = OH_MidiClientDestroy(client);
         EXPECT_EQ(ret, MIDI_STATUS_OK);
         client = nullptr; // Prevent TearDown from double-freeing
     }
