@@ -145,35 +145,38 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 #### 代码示例
 
 ```cpp
-#include <midi/native_midi.h>
+
+#include <native_midi.h>
 #include <vector>
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <iomanip>
 
 // 1. 定义设备热插拔回调
 void OnDeviceChange(void *userData, OH_MidiDeviceChangeAction action, OH_MidiDeviceInformation info) {
     if (action == MIDI_DEVICE_CHANGE_ACTION_CONNECTED) {
-        printf("[Hotplug] Device Connected: ID=%ld, Name=%s\n", info.midiDeviceId, info.productName);
+        std::cout << "[Hotplug] Device Connected: ID=" << info.midiDeviceId
+                  << ", Name=" << info.productName << std::endl;
     } else if (action == MIDI_DEVICE_CHANGE_ACTION_DISCONNECTED) {
-        printf("[Hotplug] Device Disconnected: ID=%ld\n", info.midiDeviceId);
+        std::cout << "[Hotplug] Device Disconnected: ID=" << info.midiDeviceId << std::endl;
     }
 }
 
 // 2. 定义服务错误回调
-// 当 MIDI 服务发生严重错误（如服务崩溃）时触发，建议此时重建客户端
 void OnError(void *userData, OH_MidiStatusCode code) {
-    printf("[Error] Critical Service Error occurred! Code=%d. Client may need recreation.\n", code);
+    std::cout << "[Error] Critical Service Error occurred! Code=" << code
+              << ". Client may need recreation." << std::endl;
 }
 
 // 3. 定义数据接收回调
-// 注意：OH_MidiEvent 中的 data 是 uint32_t* 类型，指向 UMP 数据包
 void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t eventCount) {
     for (size_t i = 0; i < eventCount; ++i) {
-        // 打印该事件的第一个 32位 UMP 字
-        // 如果是 MIDI 1.0 Channel Voice (32-bit)，length 通常为 1 (word)
         if (events[i].data != nullptr) {
-            printf("[Rx] Timestamp=%llu, Data=0x%08X\n", events[i].timestamp, events[i].data[0]);
+            // 使用 hex, setw, setfill 格式化 32 位十六进制输出，并在结束后用 dec 恢复十进制
+            std::cout << "[Rx] Timestamp=" << events[i].timestamp
+                      << ", Data=0x" << std::hex << std::setw(8) << std::setfill('0')
+                      << events[i].data[0] << std::dec << std::endl;
         }
     }
 }
@@ -187,7 +190,7 @@ void MidiDemo() {
 
     OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
     if (ret != MIDI_STATUS_OK) {
-        printf("Failed to create client.\n");
+        std::cout << "Failed to create client." << std::endl;
         return;
     }
 
@@ -201,7 +204,7 @@ void MidiDemo() {
 
         // 示例：操作列表中的第一个设备
         int64_t targetDeviceId = devices[0].midiDeviceId;
-        printf("Target Device ID: %ld\n", targetDeviceId);
+        std::cout << "Target Device ID: " << targetDeviceId << std::endl;
 
         // 3. 获取端口信息 (无需 OpenDevice 即可查询)
         size_t portCount = 0;
@@ -220,30 +223,23 @@ void MidiDemo() {
                 for (const auto& port : ports) {
                     // --- 场景 A: 输入端口 (接收) ---
                     if (port.direction == MIDI_PORT_DIRECTION_INPUT) {
-                        // 使用 MIDI 1.0 语义 (数据仍为 UMP 封装)
                         OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_1_0};
                         if (OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr) == MIDI_STATUS_OK) {
-                            printf("Input port %d opened.\n", port.portIndex);
+                            std::cout << "Input port " << port.portIndex << " opened." << std::endl;
                         }
                     }
                     // --- 场景 B: 输出端口 (发送) ---
                     else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
                         OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_1_0};
                         if (OH_MidiOpenOutputPort(device, desc) == MIDI_STATUS_OK) {
-                            printf("Output port %d opened. Sending data...\n", port.portIndex);
+                            std::cout << "Output port " << port.portIndex << " opened. Sending data..." << std::endl;
 
-                            // 构建 UMP 数据包
-                            // 示例: MIDI 1.0 Note On -> Channel 0, Note 60, Vel 100
-                            // UMP (32-bit) = [MT(4) | Group(4) | Status(8) | Note(8) | Vel(8)]
-                            // 0x2 -> MT (MIDI 1.0 Channel Voice)
-                            // 0x90 -> Note On, Channel 0
-                            // 0x3C -> Note 60
-                            // 0x64 -> Velocity 100
+                            // 构建 UMP 数据包: MIDI 1.0 Note On -> Channel 0, Note 60, Vel 100
                             uint32_t umpMsg[1] = { 0x20903C64 };
 
                             OH_MidiEvent event;
                             event.timestamp = 0; // 0 表示立即发送
-                            event.length = 1; // 数据长度 (1 word)
+                            event.length = 1;    // 数据长度 (1 word)
                             event.data = umpMsg; // 指向 32位 数组
 
                             uint32_t written = 0;

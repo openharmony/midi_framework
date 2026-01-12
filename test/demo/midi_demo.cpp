@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Huawei Device Co., Ltd.
+ * Copyright (C) 2024 Huawei Device Co., Ltd.
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -24,15 +24,19 @@
 using namespace std;
 
 namespace {
-// 定义 MIDI 协议类型
-constexpr OH_MidiProtocol DEMO_MIDI_PROTOCOL = MIDI_PROTOCOL_1_0;
 constexpr int32_t HEX_WIDTH = 8;
+constexpr OH_MidiProtocol MIDI_PROTOCOL_VERSION = MIDI_PROTOCOL_1_0;
+constexpr int32_t NOTE_ON_DELAY_MS = 500;
+// MIDI 1.0 Note On (Ch0, Note 60, Vel 100)
+constexpr uint32_t NOTE_ON_MSG = 0x20903C64;
+// MIDI 1.0 Note Off (Ch0, Note 60, Vel 0)
+constexpr uint32_t NOTE_OFF_MSG = 0x20803C00;
 
-// 辅助函数：将 UMP 数据打印为 Hex 格式
 void PrintUmpData(const uint32_t *data, size_t length)
 {
-    if (!data)
+    if (!data) {
         return;
+    }
     cout << "[Rx] Data: ";
     for (size_t i = 0; i < length; ++i) {
         cout << "0x" << setfill('0') << setw(HEX_WIDTH) << hex << data[i] << " ";
@@ -62,7 +66,6 @@ static void OnError(void *userData, OH_MidiStatusCode code)
 static void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t eventCount)
 {
     for (size_t i = 0; i < eventCount; ++i) {
-        // 打印时间戳和 UMP 数据
         cout << "[Rx] Timestamp=" << events[i].timestamp << " ";
         PrintUmpData(events[i].data, events[i].length);
     }
@@ -71,33 +74,58 @@ static void OnMidiReceived(void *userData, const OH_MidiEvent *events, size_t ev
 // 发送 MIDI 数据的 Demo 逻辑
 static void SendMidiNote(OH_MidiDevice *device, int8_t portIndex)
 {
-    // 构建 MIDI 1.0 Note On 消息 (Channel 0, Note 60, Velocity 100)
-    // UMP Format (32-bit): [ MT(4) | Group(4) | Status(8) | Note(8) | Velocity(8) ]
-    // 0x2 (MT=MIDI 1.0 Ch Voice) | 0x0 (Group 0) | 0x90 (NoteOn Ch0) | 0x3C (60) | 0x64 (100)
-    uint32_t noteOnMsg[1] = {0x20903C64};
-
+    uint32_t noteOnMsg[1] = {NOTE_ON_MSG};
     OH_MidiEvent event;
-    event.timestamp = 0; // 0 表示立即发送
-    event.length = 1;    // 数据长度 (1个32位字)
+    event.timestamp = 0;
+    event.length = 1;
     event.data = noteOnMsg;
 
     uint32_t written = 0;
     int ret = OH_MidiSend(device, portIndex, &event, 1, &written);
     if (ret == MIDI_STATUS_OK) {
-        cout << "[Tx] Note On sent to port " << (int)portIndex << endl;
+        cout << "[Tx] Note On sent to port " << static_cast<int>(portIndex) << endl;
     }
     else {
         cout << "[Tx] Failed to send data, error: " << ret << endl;
     }
 
-    // 延时 500ms 后发送 Note Off
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(NOTE_ON_DELAY_MS));
 
-    // Note Off (Velocity 0)
-    uint32_t noteOffMsg[1] = {0x20803C00};
+    uint32_t noteOffMsg[1] = {NOTE_OFF_MSG};
     event.data = noteOffMsg;
     OH_MidiSend(device, portIndex, &event, 1, &written);
-    cout << "[Tx] Note Off sent to port " << (int)portIndex << endl;
+    cout << "[Tx] Note Off sent to port " << static_cast<int>(portIndex) << endl;
+}
+
+// 辅助函数：初始化并打开端口
+static void SetupPorts(OH_MidiClient *client, OH_MidiDevice *device, int64_t deviceId, vector<int> &outOpenedPorts)
+{
+    size_t portCount = 0;
+    OH_MidiGetDevicePorts(client, deviceId, nullptr, &portCount);
+    if (portCount == 0) {
+        return;
+    }
+
+    vector<OH_MidiPortInformation> ports(portCount);
+    OH_MidiGetDevicePorts(client, deviceId, ports.data(), &portCount);
+
+    for (const auto &port : ports) {
+        OH_MidiPortDescriptor desc = {port.portIndex, MIDI_PROTOCOL_VERSION};
+
+        if (port.direction == MIDI_PORT_DIRECTION_INPUT) {
+            if (OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr) == MIDI_STATUS_OK) {
+                cout << "Input Port " << port.portIndex << " opened (Listening...)" << endl;
+                outOpenedPorts.push_back(port.portIndex);
+            }
+        }
+        else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
+            if (OH_MidiOpenOutputPort(device, desc) == MIDI_STATUS_OK) {
+                cout << "Output Port " << port.portIndex << " opened." << endl;
+                outOpenedPorts.push_back(port.portIndex);
+                SendMidiNote(device, port.portIndex);
+            }
+        }
+    }
 }
 
 // 主 MIDI 运行逻辑
@@ -105,85 +133,43 @@ static int RunMidiDemo()
 {
     cout << "Starting MIDI Demo..." << endl;
 
-    // 1. 创建客户端
     OH_MidiClient *client = nullptr;
-    OH_MidiCallbacks callbacks;
-    callbacks.onDeviceChange = OnDeviceChange;
-    callbacks.onError = OnError;
+    OH_MidiCallbacks callbacks = {OnDeviceChange, OnError};
 
-    OH_MidiStatusCode ret = OH_MidiClientCreate(&client, callbacks, nullptr);
-    if (ret != MIDI_STATUS_OK) {
+    if (OH_MidiClientCreate(&client, callbacks, nullptr) != MIDI_STATUS_OK) {
         cout << "Failed to create MIDI client." << endl;
         return -1;
     }
 
-    // 2. 获取设备列表
     size_t devCount = 0;
     OH_MidiGetDevices(client, nullptr, &devCount);
-
     if (devCount == 0) {
         cout << "No MIDI devices found." << endl;
         OH_MidiClientDestroy(client);
         return 0;
     }
 
-    cout << "Found " << devCount << " device(s)." << endl;
     vector<OH_MidiDeviceInformation> devices(devCount);
     OH_MidiGetDevices(client, devices.data(), &devCount);
 
-    // 3. 默认操作第一个设备（实际场景可增加选择逻辑）
+    // 默认操作第一个设备
     int64_t targetDeviceId = devices[0].midiDeviceId;
-    string deviceName = devices[0].productName;
-    cout << "Opening Device: " << deviceName << " (ID: " << targetDeviceId << ")" << endl;
+    cout << "Opening Device: " << devices[0].productName << " (ID: " << targetDeviceId << ")" << endl;
 
-    // 4. 打开设备
     OH_MidiDevice *device = nullptr;
-    ret = OH_MidiOpenDevice(client, targetDeviceId, &device);
-    if (ret != MIDI_STATUS_OK || device == nullptr) {
+    if (OH_MidiOpenDevice(client, targetDeviceId, &device) != MIDI_STATUS_OK || !device) {
         cout << "Failed to open device." << endl;
         OH_MidiClientDestroy(client);
         return -1;
     }
 
-    // 5. 获取端口信息
-    size_t portCount = 0;
-    OH_MidiGetDevicePorts(client, targetDeviceId, nullptr, &portCount);
-    vector<OH_MidiPortInformation> ports(portCount);
-    OH_MidiGetDevicePorts(client, targetDeviceId, ports.data(), &portCount);
-
     vector<int> openedPorts;
+    SetupPorts(client, device, targetDeviceId, openedPorts);
 
-    // 6. 遍历并打开端口
-    for (const auto &port : ports) {
-        OH_MidiPortDescriptor desc = {port.portIndex, DEMO_MIDI_PROTOCOL};
-
-        if (port.direction == MIDI_PORT_DIRECTION_INPUT) {
-            // 打开输入端口 (接收)
-            if (OH_MidiOpenInputPort(device, desc, OnMidiReceived, nullptr) == MIDI_STATUS_OK) {
-                cout << "Input Port " << port.portIndex << " opened (Listening...)" << endl;
-                openedPorts.push_back(port.portIndex);
-            }
-        }
-        else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
-            // 打开输出端口 (发送)
-            if (OH_MidiOpenOutputPort(device, desc) == MIDI_STATUS_OK) {
-                cout << "Output Port " << port.portIndex << " opened." << endl;
-                openedPorts.push_back(port.portIndex);
-                // 简单的发送测试
-                SendMidiNote(device, port.portIndex);
-            }
-        }
-    }
-
-    cout << "\n========================================" << endl;
-    cout << "MIDI Running. Press ENTER to stop..." << endl;
-    cout << "========================================" << endl;
-
-    // 阻塞主线程，等待用户输入以退出
+    cout << "\n=== MIDI Running. Press ENTER to stop... ===" << endl;
     string dummy;
     getline(cin, dummy);
 
-    // 7. 资源清理
     cout << "Cleaning up..." << endl;
     for (int portIndex : openedPorts) {
         OH_MidiClosePort(device, portIndex);
@@ -197,6 +183,6 @@ static int RunMidiDemo()
 
 int main()
 {
-    (void)RunMidiDemo();
+    RunMidiDemo();
     return 0;
 }
