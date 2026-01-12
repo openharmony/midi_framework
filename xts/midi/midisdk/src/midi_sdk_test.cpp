@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2025 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "gtest/gtest.h"
 #include "native_midi.h"
 #include <iostream>
@@ -31,8 +45,9 @@ protected:
         if (OH_MidiGetDevices(client, nullptr, &count) != MIDI_STATUS_OK) {
             return -1;
         }
-        if (count == 0) return -1;
-
+        if (count == 0) {
+            return -1;
+        }
         std::vector<OH_MidiDeviceInformation> infos(count);
         if (OH_MidiGetDevices(client, infos.data(), &count) != MIDI_STATUS_OK) {
             return -1;
@@ -116,7 +131,7 @@ HWTEST_F(MidiSdkTest, MidiOpenDevice_001, Function | MediumTest | Level1) {
  */
 HWTEST_F(MidiSdkTest, MidiOpenDevice_002, Function | MediumTest | Level1) {
     OH_MidiDevice *device = nullptr;
-    int64_t invalidId = 999999; 
+    int64_t invalidId = 999999;
     OH_MidiStatusCode ret = OH_MidiOpenDevice(client, invalidId, &device);
     EXPECT_NE(ret, MIDI_STATUS_OK);
 }
@@ -167,7 +182,7 @@ HWTEST_F(MidiSdkTest, MidiOpenOutputPort_001, Function | MediumTest | Level1) {
             ret = OH_MidiClosePort(device, targetPortIndex);
             EXPECT_EQ(ret, MIDI_STATUS_OK);
         } else {
-             printf("[MidiSdkTest] Skip: No OUTPUT port found on device.\n");
+            printf("[MidiSdkTest] Skip: No OUTPUT port found on device.\n");
         }
     }
 
@@ -194,7 +209,7 @@ HWTEST_F(MidiSdkTest, MidiSend_001, Function | MediumTest | Level1) {
     
     if (ret == MIDI_STATUS_OK) {
         // Type=2, Group=0, Status=0x90, Note=60, Vel=100
-        uint32_t umpData = 0x20903C64; 
+        uint32_t umpData = 0x20903C64;
         
         OH_MidiEvent event;
         event.timestamp = 0; // Immediate
@@ -219,10 +234,10 @@ HWTEST_F(MidiSdkTest, MidiSend_001, Function | MediumTest | Level1) {
  */
 HWTEST_F(MidiSdkTest, MidiOpenBleDevice_Negative_001, Function | MediumTest | Level2) {
     OH_MidiDevice *device = nullptr;
-    const char *valid_mac = "AA:BB:CC:DD:EE:FF";
+    const char *validMac = "AA:BB:CC:DD:EE:FF";
 
     // Case 1: Null Client
-    OH_MidiStatusCode ret = OH_MidiOpenBleDevice(nullptr, valid_mac, &device);
+    OH_MidiStatusCode ret = OH_MidiOpenBleDevice(nullptr, validMac, &device);
     EXPECT_EQ(ret, MIDI_STATUS_INVALID_CLIENT);
 
     // Case 2: Null Address
@@ -245,8 +260,10 @@ void TestOnMidiReceived(void *userData, const OH_MidiEvent *events, size_t event
  */
 HWTEST_F(MidiSdkTest, MidiOpenInputPort_Validation_001, Function | MediumTest | Level1) {
     int64_t devId = GetFirstDeviceId();
-    if (devId < 0) return; // Skip
-
+    if (devId < 0) {
+        return; // Skip
+    }
+    
     OH_MidiDevice *device = nullptr;
     OH_MidiOpenDevice(client, devId, &device);
     ASSERT_NE(device, nullptr);
@@ -300,8 +317,8 @@ HWTEST_F(MidiSdkTest, MidiSendSysEx_001, Function | MediumTest | Level1) {
     OH_MidiGetDevicePorts(device, ports.data(), &portCount);
     
     int outPortIndex = -1;
-    for(auto &p : ports) {
-        if(p.direction == MIDI_PORT_DIRECTION_OUTPUT) {
+    for (auto &p : ports) {
+        if (p.direction == MIDI_PORT_DIRECTION_OUTPUT) {
             outPortIndex = p.portIndex;
             break;
         }
@@ -336,7 +353,9 @@ HWTEST_F(MidiSdkTest, MidiSendSysEx_001, Function | MediumTest | Level1) {
  */
 HWTEST_F(MidiSdkTest, MidiFlush_001, Function | MediumTest | Level1) {
     int64_t devId = GetFirstDeviceId();
-    if (devId < 0) return;
+    if (devId < 0) {
+        return;
+    }
 
     OH_MidiDevice *device = nullptr;
     OH_MidiOpenDevice(client, devId, &device);
@@ -357,7 +376,7 @@ HWTEST_F(MidiSdkTest, MidiFlush_001, Function | MediumTest | Level1) {
         // Case 2: Flush Closed Port (Negative)
         OH_MidiStatusCode ret = OH_MidiFlushOutputPort(device, 0);
 
-        EXPECT_NE(ret, MIDI_STATUS_GENERIC_IPC_FAILURE); 
+        EXPECT_NE(ret, MIDI_STATUS_GENERIC_IPC_FAILURE);
     }
 
     OH_MidiCloseDevice(device);
@@ -373,7 +392,7 @@ HWTEST_F(MidiSdkTest, MidiClient_Destroy_Negative_001, Function | MediumTest | L
     OH_MidiStatusCode ret = OH_MidiClient_Destroy(nullptr);
     EXPECT_EQ(ret, MIDI_STATUS_INVALID_CLIENT);
 
-    // Case 2: Double Destroy is NOT safe to test directly if it crashes, 
+    // Case 2: Double Destroy is NOT safe to test directly if it crashes,
     // but we can ensure logic flow.
     // In SetUp/TearDown pattern, client is destroyed at TearDown.
     // Here we manually destroy it to test success.
