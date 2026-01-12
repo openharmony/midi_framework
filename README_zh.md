@@ -145,7 +145,6 @@ midi_framework部件向开发者提供了C语言原生接口（Native API），�
 #### 代码示例
 
 ```cpp
-
 #include <native_midi.h>
 #include <vector>
 #include <iostream>
