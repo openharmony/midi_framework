@@ -86,7 +86,6 @@ HWTEST_F(MidiDeviceUsbUnitTest, GetRegisteredDevices_001, TestSize.Level0)
 HWTEST_F(MidiDeviceUsbUnitTest, GetRegisteredDevices_002, TestSize.Level0)
 {
     sptr<MockIMidiInterface> mockMidiHdi = sptr<MockIMidiInterface>::MakeSptr();
-    ASSERT_NE(nullptr, mockMidiHdi);
 
     UsbMidiTransportDeviceDriver driver;
     driver.midiHdi_ = mockMidiHdi;

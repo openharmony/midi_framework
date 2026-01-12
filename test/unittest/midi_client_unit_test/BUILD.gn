@@ -56,5 +56,6 @@ ohos_unittest("midi_client_unit_test") {
     "googletest:gmock",
     "googletest:gtest",
     "hilog:libhilog",
+    "ipc:ipc_single",
   ]
 }

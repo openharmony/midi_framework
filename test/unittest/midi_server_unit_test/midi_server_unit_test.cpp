@@ -26,7 +26,6 @@
 #include "system_ability_definition.h"
 #include <map>
 
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -42,16 +41,6 @@ public:
     MOCK_METHOD(int32_t, NotifyError, (int32_t code), (override));
     MOCK_METHOD(sptr<IRemoteObject>, AsObject, (), (override));
 };
-
-// class MockIRemoteObject : public IRemoteObject {
-// public:
-//     MockIRemoteObject() : IRemoteObject(u"IRemoteObject") {}
-//     MOCK_METHOD(int32_t, GetObjectRefCount, (), (override));
-//     MOCK_METHOD(int, SendRequest, (uint32_t code, MessageParcel &data, MessageParcel &reply, MessageOption &option),
-//     (override)); MOCK_METHOD(bool, AddDeathRecipient, (const sptr<DeathRecipient> &recipient), (override));
-//     MOCK_METHOD(bool, RemoveDeathRecipient, (const sptr<DeathRecipient> &recipient), (override));
-//     MOCK_METHOD(int, Dump, (int fd, const std::vector<std::u16string> &args), (override));
-// };
 
 class TestMidiCallbackStub : public IRemoteStub<IMidiCallback> {
 public:
@@ -275,9 +264,6 @@ HWTEST_F(MidiServerUnitTest, MidiServer_CreateClientInServer001, TestSize.Level0
     server->controller_ = controler;
     ASSERT_NE(server->controller_, nullptr);
     ASSERT_NE(object, nullptr);
-
-    // EXPECT_CALL(*controler, CreateClientInServer(_, _, _))
-    //     .WillOnce(Return(MIDI_STATUS_OK));
 
     EXPECT_NE(nullptr, server->controller_);
     EXPECT_EQ(MIDI_STATUS_OK, server->CreateClientInServer(object, client, clientId));

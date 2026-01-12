@@ -18,9 +18,9 @@
 
 #include "futex_tool.h"
 
+#include "linux/futex.h"
 #include <cinttypes>
 #include <ctime>
-#include "linux/futex.h"
 #include <sys/syscall.h>
 
 #include "midi_log.h"
@@ -33,36 +33,34 @@ const int32_t WAIT_TRY_COUNT = 50;
 const int64_t SEC_TO_NANOSEC = 1000000000;
 
 // Default implementation calling the real syscall
-long RealSysCall(std::atomic<uint32_t> *futexPtr, int op, int val, const struct timespec *timeout)
+static long RealSysCall(std::atomic<uint32_t> *futexPtr, int op, int val, const struct timespec *timeout)
 {
     // The syscall interface requires raw pointers and specific casts
     return syscall(__NR_futex, futexPtr, op, val, timeout, NULL, 0);
 }
 
 // Default implementation calling the real time utility
-int64_t RealGetTime()
-{
-    return ClockTime::GetCurNano();
-}
+static int64_t RealGetTime() { return ClockTime::GetCurNano(); }
 
 // Global wrappers initialized with default real implementations
 FutexTool::FutexSysCall g_sysCallFunc = RealSysCall;
 FutexTool::TimeGetter g_timeFunc = RealGetTime;
-
-}  // namespace
+} // namespace
 
 // Exposed interface to inject mocks for Unit Testing
 void FutexTool::SetStubFunc(const FutexSysCall &sysCall, const TimeGetter &timeCall)
 {
     if (sysCall) {
         g_sysCallFunc = sysCall;
-    } else {
+    }
+    else {
         g_sysCallFunc = RealSysCall;
     }
 
     if (timeCall) {
         g_timeFunc = timeCall;
-    } else {
+    }
+    else {
         g_timeFunc = RealGetTime;
     }
 }
@@ -112,10 +110,7 @@ FutexCode ExecFutexWaitSyscall(std::atomic<uint32_t> *futexPtr, int64_t timeout,
 
     if ((res != 0) && (sysErr == ETIMEDOUT)) {
         MIDI_WARNING_LOG("wait:%{public}" PRId64 "ns timeout, result:%{public}ld sysErr[%{public}d]:%{public}s",
-            timeout,
-            res,
-            sysErr,
-            strerror(sysErr));
+                         timeout, res, sysErr, strerror(sysErr));
         return FUTEX_TIMEOUT;
     }
 
@@ -192,5 +187,5 @@ FutexCode FutexTool::FutexWake(std::atomic<uint32_t> *futexPtr, uint32_t wakeVal
     }
     return FUTEX_SUCCESS;
 }
-}  // namespace MIDI
-}  // namespace OHOS
+} // namespace MIDI
+} // namespace OHOS

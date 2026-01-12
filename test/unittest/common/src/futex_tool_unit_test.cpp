@@ -13,13 +13,13 @@
  * limitations under the License.
  */
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 #include <atomic>
 #include <functional>
-#include <vector>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <linux/futex.h>
 #include <sys/syscall.h>
+#include <vector>
 
 #include "futex_tool.h"
 
@@ -30,10 +30,8 @@ using namespace testing::ext;
 
 class FutexToolUnitTest : public testing::Test {
 public:
-    static void SetUpTestCase()
-    {}
-    static void TearDownTestCase()
-    {}
+    static void SetUpTestCase() {}
+    static void TearDownTestCase() {}
 
     void SetUp() override
     {
@@ -84,7 +82,7 @@ HWTEST_F(FutexToolUnitTest, FutexWait_InvalidParams_002, TestSize.Level0)
  */
 HWTEST_F(FutexToolUnitTest, FutexWait_InvalidParams_003, TestSize.Level0)
 {
-    testFutex_ = 999;  // Invalid value
+    testFutex_ = 999; // Invalid value
     auto pred = []() { return false; };
     FutexCode ret = FutexTool::FutexWait(&testFutex_, 1000, pred);
     EXPECT_EQ(ret, FUTEX_INVALID_PARAMS);
@@ -102,7 +100,7 @@ HWTEST_F(FutexToolUnitTest, FutexWait_ImmediateSuccess_001, TestSize.Level0)
 
     // Inject mock to ensure syscall is NOT called
     bool syscallCalled = false;
-    auto mockSysCall = [&](std::atomic<uint32_t> *, int, int, const struct timespec *) -> long {
+    auto mockSysCall = [&syscallCalled](std::atomic<uint32_t> *, int, int, const struct timespec *) -> long {
         syscallCalled = true;
         return 0;
     };
@@ -166,8 +164,9 @@ HWTEST_F(FutexToolUnitTest, FutexWait_CalculationTimeout_001, TestSize.Level0)
     // 2nd call (recalculate): 2000 (timeout is 1000, so 2000 > 1000 -> expired)
     int callCount = 0;
     auto mockTime = [&callCount]() -> int64_t {
-        if (callCount++ == 0)
+        if (callCount++ == 0) {
             return 0;
+        }
         return 2000;
     };
 
@@ -228,7 +227,7 @@ HWTEST_F(FutexToolUnitTest, FutexWait_MaxTryCount_001, TestSize.Level0)
     FutexTool::SetStubFunc(mockSysCall, mockTime);
 
     FutexCode ret = FutexTool::FutexWait(&testFutex_, 1000, pred);
-    EXPECT_EQ(ret, FUTEX_OPERATION_FAILED);  // "too much spurious wake-up"
+    EXPECT_EQ(ret, FUTEX_OPERATION_FAILED); // "too much spurious wake-up"
 }
 
 /**
@@ -262,10 +261,11 @@ HWTEST_F(FutexToolUnitTest, FutexWake_InvalidParams_002, TestSize.Level0)
 HWTEST_F(FutexToolUnitTest, FutexWake_PreExit_001, TestSize.Level0)
 {
     bool syscallCalled = false;
-    auto mockSysCall = [&](std::atomic<uint32_t> *uaddr, int op, int val, const struct timespec *) -> long {
+    auto mockSysCall = [&syscallCalled](std::atomic<uint32_t> *uaddr, int op, int val,
+                                        const struct timespec *) -> long {
         syscallCalled = true;
         EXPECT_EQ(op, FUTEX_WAKE);
-        return 1;  // Woke 1 process
+        return 1; // Woke 1 process
     };
     FutexTool::SetStubFunc(mockSysCall, nullptr);
 
@@ -285,14 +285,14 @@ HWTEST_F(FutexToolUnitTest, FutexWake_Normal_001, TestSize.Level0)
     testFutex_ = IS_NOT_READY;
 
     bool syscallCalled = false;
-    auto mockSysCall = [&](std::atomic<uint32_t> *, int op, int, const struct timespec *) -> long {
+    auto mockSysCall = [&syscallCalled](std::atomic<uint32_t> *, int op, int, const struct timespec *) -> long {
         syscallCalled = true;
         EXPECT_EQ(op, FUTEX_WAKE);
         return 1;
     };
     FutexTool::SetStubFunc(mockSysCall, nullptr);
 
-    FutexCode ret = FutexTool::FutexWake(&testFutex_);  // default wakeVal is IS_READY
+    FutexCode ret = FutexTool::FutexWake(&testFutex_); // default wakeVal is IS_READY
     EXPECT_EQ(ret, FUTEX_SUCCESS);
     EXPECT_TRUE(syscallCalled);
     // Should transition back to IS_READY logic (via compare_exchange_strong in impl)
@@ -312,7 +312,7 @@ HWTEST_F(FutexToolUnitTest, FutexWake_NoWait_001, TestSize.Level0)
     testFutex_ = IS_READY;
 
     bool syscallCalled = false;
-    auto mockSysCall = [&](std::atomic<uint32_t> *, int, int, const struct timespec *) -> long {
+    auto mockSysCall = [&syscallCalled](std::atomic<uint32_t> *, int, int, const struct timespec *) -> long {
         syscallCalled = true;
         return 0;
     };
@@ -334,7 +334,7 @@ HWTEST_F(FutexToolUnitTest, FutexWake_SyscallFailed_001, TestSize.Level0)
     testFutex_ = IS_NOT_READY;
 
     auto mockSysCall = [](std::atomic<uint32_t> *, int, int, const struct timespec *) -> long {
-        errno = EACCES;  // Simulate some error
+        errno = EACCES; // Simulate some error
         return -1;
     };
     FutexTool::SetStubFunc(mockSysCall, nullptr);
@@ -360,9 +360,10 @@ HWTEST_F(FutexToolUnitTest, FutexWait_NegativeTimeout_001, TestSize.Level0)
     // RecalculateWaitTime should return true immediately for timeout <= 0
     // Syscall should receive NULL timeout pointer
     bool nullTimeoutPtr = false;
-    auto mockSysCall = [&](std::atomic<uint32_t> *, int, int, const struct timespec *timeout) -> long {
-        if (timeout == nullptr)
+    auto mockSysCall = [&nullTimeoutPtr](std::atomic<uint32_t> *, int, int, const struct timespec *timeout) -> long {
+        if (timeout == nullptr) {
             nullTimeoutPtr = true;
+        }
         return 0;
     };
 

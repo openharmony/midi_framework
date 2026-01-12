@@ -13,19 +13,20 @@
  * limitations under the License.
  */
 
-#include <iostream>
-#include <vector>
-#include <thread>
 #include <chrono>
 #include <iomanip>
-#include <string>
+#include <iostream>
 #include <native_midi.h>
+#include <string>
+#include <thread>
+#include <vector>
 
 using namespace std;
 
 namespace {
 // 定义 MIDI 协议类型
 constexpr OH_MidiProtocol DEMO_MIDI_PROTOCOL = MIDI_PROTOCOL_1_0;
+constexpr int32_t HEX_WIDTH = 8;
 
 // 辅助函数：将 UMP 数据打印为 Hex 格式
 void PrintUmpData(const uint32_t *data, size_t length)
@@ -34,18 +35,19 @@ void PrintUmpData(const uint32_t *data, size_t length)
         return;
     cout << "[Rx] Data: ";
     for (size_t i = 0; i < length; ++i) {
-        cout << "0x" << setfill('0') << setw(8) << hex << data[i] << " ";
+        cout << "0x" << setfill('0') << setw(HEX_WIDTH) << hex << data[i] << " ";
     }
     cout << dec << endl;
 }
-}  // namespace
+} // namespace
 
 // 1. 设备热插拔回调
 static void OnDeviceChange(void *userData, OH_MidiDeviceChangeAction action, OH_MidiDeviceInformation info)
 {
     if (action == MIDI_DEVICE_CHANGE_ACTION_CONNECTED) {
         cout << "[Hotplug] Device Connected: ID=" << info.midiDeviceId << ", Name=" << info.productName << endl;
-    } else if (action == MIDI_DEVICE_CHANGE_ACTION_DISCONNECTED) {
+    }
+    else if (action == MIDI_DEVICE_CHANGE_ACTION_DISCONNECTED) {
         cout << "[Hotplug] Device Disconnected: ID=" << info.midiDeviceId << endl;
     }
 }
@@ -75,15 +77,16 @@ static void SendMidiNote(OH_MidiDevice *device, int8_t portIndex)
     uint32_t noteOnMsg[1] = {0x20903C64};
 
     OH_MidiEvent event;
-    event.timestamp = 0;  // 0 表示立即发送
-    event.length = 1;     // 数据长度 (1个32位字)
+    event.timestamp = 0; // 0 表示立即发送
+    event.length = 1;    // 数据长度 (1个32位字)
     event.data = noteOnMsg;
 
     uint32_t written = 0;
     int ret = OH_MidiSend(device, portIndex, &event, 1, &written);
     if (ret == MIDI_STATUS_OK) {
         cout << "[Tx] Note On sent to port " << (int)portIndex << endl;
-    } else {
+    }
+    else {
         cout << "[Tx] Failed to send data, error: " << ret << endl;
     }
 
@@ -160,7 +163,8 @@ static int RunMidiDemo()
                 cout << "Input Port " << port.portIndex << " opened (Listening...)" << endl;
                 openedPorts.push_back(port.portIndex);
             }
-        } else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
+        }
+        else if (port.direction == MIDI_PORT_DIRECTION_OUTPUT) {
             // 打开输出端口 (发送)
             if (OH_MidiOpenOutputPort(device, desc) == MIDI_STATUS_OK) {
                 cout << "Output Port " << port.portIndex << " opened." << endl;

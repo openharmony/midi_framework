@@ -60,6 +60,7 @@ ohos_unittest("midi_server_unittest") {
     "googletest:gtest",
     "hilog:libhilog",
     "safwk:system_ability_fwk",
+    "samgr:samgr_proxy",
     "ipc:ipc_single",
   ]
 }
