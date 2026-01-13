@@ -21,7 +21,7 @@
 #include "midi_client.h"
 #include "midi_log.h"
 
-OH_MidiStatusCode OH_MidiClient_Create(OH_MidiClient **client, OH_MidiCallbacks callbacks, void *userData)
+OH_MidiStatusCode OH_MidiClientCreate(OH_MidiClient **client, OH_MidiCallbacks callbacks, void *userData)
 {
     CHECK_AND_RETURN_RET_LOG(client != nullptr, MIDI_STATUS_GENERIC_INVALID_ARGUMENT, "client is nullptr");
     OHOS::MIDI::MidiClient *midiclient = nullptr;
@@ -31,7 +31,7 @@ OH_MidiStatusCode OH_MidiClient_Create(OH_MidiClient **client, OH_MidiCallbacks 
     return MIDI_STATUS_OK;
 }
 
-OH_MidiStatusCode OH_MidiClient_Destroy(OH_MidiClient *client)
+OH_MidiStatusCode OH_MidiClientDestroy(OH_MidiClient *client)
 {
     OHOS::MIDI::MidiClient *midiclient = (OHOS::MIDI::MidiClient *)client;
     CHECK_AND_RETURN_RET_LOG(midiclient != nullptr, MIDI_STATUS_INVALID_CLIENT, "convert builder failed");
