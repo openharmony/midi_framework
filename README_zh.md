@@ -288,7 +288,7 @@ OH_MidiStatusCode ret = OH_MidiOpenBleDevice(client, deviceAddr, &device, &midiD
 * **UMP Native**：midi_framework 采用全链路 UMP 设计。无论物理设备是 MIDI 1.0 还是 MIDI 2.0，Native API 接口收发的数据**始终为 UMP 格式**。
 
 * **权限说明**
-* 应用访问 MIDI 设备可能需要申请相应的系统权限（具体权限定义请参考系统权限列表），并确保设备通过 USB 或蓝牙完成了系统的连接认证。
+* 应用访问 BLE MIDI 设备需要申请相应的系统权限(@ohos.permission.ACCESS_BLUETOOTH)。
 
 ## 相关仓
 [媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)
