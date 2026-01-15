@@ -10,7 +10,7 @@ midi_framework 包含以下常用功能：
 * **设备发现与管理**：支持查询已连接 USB 及 BLE MIDI 设备的列表、热插拔监听及连接 BLE MIDI 设备。
 * **高性能数据传输**：支持基于 UMP（Universal MIDI Packet）协议的指令收发。
 
-MIDI 部件是一个可选能力，应用需要通过 SystemCapability.Multimedia.Audio.MIDI 判断OpenHarmony设备是否支持MIDI。
+midi_framework 部件是一个可选系统能力，应用需要通过 SystemCapability.Multimedia.Audio.MIDI 判断OpenHarmony设备是否支持MIDI。
 
 ## 系统架构
 
@@ -168,7 +168,7 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 
 midi_framework部件向开发者提供了 **Native API**，主要涵盖客户端管理、设备管理及端口操作。主要接口及其功能如下：
 
-**表 2** 接口说明
+**表 1** 接口说明
 
 | 接口名称                  | 功能描述                                                             |
 | ------------------------- | -------------------------------------------------------------------- |
