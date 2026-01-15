@@ -1,27 +1,114 @@
 # midi_framework
 
 ## 简介
-
 MIDI（Musical Instrument Digital Interface）设备是指符合 MIDI 标准协议的电子乐器、控制器及周边音频设备（如电子琴、电子鼓、打击垫、合成器等）。
 
-`midi_framework` 是 OpenHarmony 操作系统中用于管理和控制 MIDI 设备的模块。它提供统一的 MIDI 设备管理、数据传输及协议解析接口，屏蔽底层硬件差异，使得应用能够方便地通过 Native API 与外部 MIDI 设备进行高性能交互。
+`midi_framework` 是 OpenHarmony 操作系统中用于管理和控制 MIDI 设备的模块。它提供统一的 MIDI 设备管理和 MIDI 数据传输接口，屏蔽底层硬件差异，使得应用能够方便地通过 Native API 与外部 MIDI 设备进行高性能交互。
 
 midi_framework 包含以下常用功能：
 
 * **设备发现与管理**：支持查询已连接 USB 及 BLE MIDI 设备的列表、热插拔监听及连接 BLE MIDI 设备。
 * **高性能数据传输**：支持基于 UMP（Universal MIDI Packet）协议的指令收发。
 
+MIDI 部件是一个可选能力，应用需要通过 SystemCapability.Multimedia.Audio.MIDI 判断OpenHarmony设备是否支持MIDI。
+
 ## 系统架构
 
 ![midi_framework部件架构图](figures/zh-cn_image_midi_framework.png)<br>
 **图 1** OpenHarmony MIDI 服务架构图
 
-* **MIDI 服务 (midi_server)**: 系统核心服务，提供设备统一路由管理与数据交互能力。包含**设备管理**（维护设备列表、监听设备插拔）、**客户端连接管理**（管理应用会话与权限）、**数据传输**（基于共享内存的高性能通道）、**协议转换**（UMP 与 Byte Stream 互转）以及 **USB 适配**和 **蓝牙适配**模块。 midi_server 采用按需启动（On-Demand） 的独立进程模式运行。当应用调用客户端创建接口（OH_MIDIClientCreate）时，系统通过 samgr 服务（System Ability Manager）自动拉起 MIDI 服务进程，物理设备的插入不会触发服务启动；当所有客户端销毁且15s内无活跃会话时，服务进程将自动退出，以优化系统资源占用。
-* **Audio Kit (OHMIDI)**: 音频开发套件中负责 MIDI 能力的接口集合。OHMIDI 为应用层（如 DAW 或 Demo）提供标准 Native API，实现设备列表获取、连接建立及 MIDI 消息收发功能。（注：Audio Kit 还包含 OHAudio 等其它音频接口，与本部件无直接联系且不属于本部件范围）。
-* **MIDI Demo / DAW 应用**: 使用 MIDI 能力的应用。**DAW 应用**指待接入的第三方数字音频工作站；**MIDI Demo** 为参考示例（位于test/demo目录下），用于演示和验证 MIDI 设备的连接与指令交互流程。
-* **蓝牙服务和 USB 服务**: MIDI 服务依赖的关键系统能力。**USB 服务**负责监听 USB 设备的热插拔状态，并及时通知 MIDI 服务有设备上线或下线；**蓝牙服务**与 MIDI 服务进行交互，负责 BLE MIDI 设备的连接建立及数据 I/O 传输。
-* **MIDI 驱动**: 实现 MIDI 硬件抽象的核心组件。它对接 MIDI 服务，负责底层的**端口管理**与**数据 I/O**，屏蔽不同硬件的差异，向服务层提供统一的读写标准。
-* **蓝牙驱动和 USB 驱动**: 支撑物理通信的基础驱动。**USB 驱动**确保标准 UAC 设备被内核正确识别；**蓝牙驱动**实现无线协议栈，保障 BLE MIDI 设备连接的稳定性与低延迟传输。
+### 系统架构与模块交互
+
+#### 1. 模块分层说明
+
+系统整体划分为应用层、框架层（提供API）、系统服务层、系统依赖层及驱动/硬件层。
+
+* **应用层**
+  * **MIDI APP**: 终端用户应用（如 DAW、教学软件）。负责调用 MIDI 客户端接口，执行业务逻辑，如设备扫描（BLE）、设备选择及MIDI数据的处理与展示。
+
+* **框架层**
+  * **MIDI 客户端实例管理**: 负责对外提供 `OH_MIDIClientCreate/Destroy` 等接口，维护客户端上下文，并负责向系统申请或释放 MIDI 服务资源。
+  * **MIDI 设备连接管理**: 负责 `OH_MIDIOpen/CloseDevice` 及 `OH_MIDIGetDevices` 等接口，处理设备的逻辑连接与状态查询。
+  * **MIDI 端口管理与数据传输**: 负责 `OH_MIDIOpenInput/OutputPort` 等接口，建立应用与服务间的数据传输通道。
+
+* **系统服务层 (Midi Server)**
+  * **MIDI 客户端会话管理**: 负责响应客户端的 IPC 请求，管理跨进程会话资源。并在无活跃会话时触发服务退出机制。
+  * **MIDI 设备管理**: 维护全局已连接设备列表，统一分发设备热插拔状态（`OH_OnMidiDeviceChange`）。
+  * **USB MIDI 适配**: 对接 USB 服务与 MIDI 驱动，处理标准 USB MIDI 设备的枚举与数据透传。
+  * **蓝牙 MIDI 适配**: 对接蓝牙服务，处理 BLE MIDI 设备的连接维护与数据读写。
+  * **MIDI 协议转换**: 负责在 UMP（通用 MIDI 包）与传统 MIDI 1.0 字节流之间进行转换（主要用于 BLE 设备）。
+  * **samgr 服务 (System Ability Manager)**: 系统能力管理者，负责 MIDI 服务的按需拉起与注册。
+  * **USB 服务 / 蓝牙服务**: OpenHarmony 基础系统服务。USB 服务负责上报硬件插拔事件；蓝牙服务负责 BLE 扫描与 GATT 连接。
+
+* **驱动层**
+* **USB 驱动 / 蓝牙驱动**: 负责物理链路的通信保障。
+* **MIDI 驱动**: 实现硬件抽象，提供对底层 USB 音频/MIDI 节点的访问能力。
+
+* **外设**
+* **USB MIDI 外设**: 如 USB MIDI 键盘、合成器。
+* **BLE MIDI 外设**: 如蓝牙 MIDI 键盘。
+
+---
+
+#### 2. 关键交互流程
+
+为了更清晰地展示各模块如何协同工作，以下详解三大核心流程：
+
+##### A. 服务按需启动与生命周期管理
+
+MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系统资源消耗。
+
+1. **拉起服务**:
+   * 当 **MIDI APP** 调用 `OH_MIDIClientCreate` 时，**MIDI 客户端实例管理** 模块会向 **samgr 服务** 查询 MIDI 服务代理。
+   * 若服务未启动，**samgr 服务** 会自动拉起 MIDI 服务进程，并完成服务的初始化。
+2. **建立会话**:
+   * 服务启动后，客户端通过 IPC 与服务端的 **MIDI 客户端会话管理** 模块建立连接，分配对应的服务资源。
+3. **自动释放**:
+   * 当 **MIDI APP** 调用 `OH_MIDIClientDestroy` 或发生进程异常退出时，服务端的 **会话管理** 模块会清理对应资源。
+   * **退出判定**: 当活跃客户端数量降为 0，且在 **15秒** 内无新的连接建立时，MIDI 服务执行资源释放逻辑并自动退出进程。
+
+![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<br>
+**图 2** 服务按需启动与生命周期管理流程图
+
+##### B. 设备发现与连接管理
+
+设备连接流程根据物理链路（USB/BLE）的不同，涉及不同的外部模块交互。
+
+* **USB MIDI 设备流程**:
+  1. **物理接入**: USB MIDI 键盘/合成器插入，**USB 驱动** 识别硬件并上报给 **USB 服务**。
+  2. **被动发现**: **USB 服务** 通知 MIDI 服务的 **USB MIDI 适配** 模块。适配模块解析设备信息后，将其注册到 **MIDI 设备管理** 模块。
+  3. **通知应用**: 若 **MIDI APP** 注册了回调，会收到设备上线事件。此时 APP 可调用 `OH_MIDIGetDevices` 获取最新列表。
+  4. **建立连接**: APP 调用 `OH_MIDIOpenDevice` -> 客户端通过 IPC 请求服务端 -> 服务端 **MIDI 设备管理** 识别为 USB 设备 -> 调度 **USB MIDI 适配** 模块 -> 通过 **MIDI 驱动** 打开底层设备节点。
+
+
+* **BLE MIDI 设备流程**:
+  1. **主动发现**: **MIDI APP** 调用系统蓝牙接口（`@ohos.bluetooth.ble`的`startBLEScan`）启动扫描，根据 UUID 过滤出 BLE MIDI 外设。
+     * **MIDI Service UUID**: `03B80E5A-EDE8-4B33-A751-6CE34EC4C700` (参照 [Bluetooth Low Energy MIDI Specification](https://midi.org/midi-over-bluetooth-low-energy-ble-midi))
+  2. **接入服务**: APP 获取 MAC 地址后，调用 `OH_MIDIOpenBleDevice`。
+  3. **建立连接**: 客户端请求服务端 -> 服务端 **MIDI 设备管理** 识别为 BLE 请求 -> 调度 **蓝牙 MIDI 适配** 模块 -> 调用 **蓝牙服务** 建立 GATT 连接。
+  4. **统一管理**: 连接成功后，该 BLE 设备被纳入 **MIDI 设备管理** 模块的通用列表，APP 可像操作 USB 设备一样对其进行端口操作。
+
+![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<br>
+**图 3** 设备发现与连接管理流程图
+
+##### C. 端口管理与数据传输
+
+数据传输链路涉及跨进程通信与协议适配。
+
+1. **建立通路**:
+   * **MIDI APP** 调用 `OH_MIDIOpenInputPort/OutputPort`。
+   * **MIDI 端口管理** 模块与服务端协商，在客户端与服务端之间建立 **共享内存** 通道。
+2. **数据收发**:
+   * **发送 (APP -> 外设)**: APP 调用 `OH_MIDISend` -> 数据写入共享内存 -> 服务端读取。
+   * **分发**:
+   * 若为 **USB 设备**: 数据经由 **USB MIDI 适配** 模块 -> **MIDI 驱动** -> **USB 驱动** -> 硬件。
+   * 若为 **BLE 设备**: 数据经由 **蓝牙 MIDI 适配** 模块 -> **MIDI 协议转换** (UMP转字节流) -> **蓝牙服务** -> **蓝牙驱动** -> 硬件。
+3. **接收 (外设 -> APP)**:
+   * 硬件数据经驱动上报，服务端适配模块处理后（BLE 需进行协议转换），写入共享内存。
+   * 客户端 **MIDI 端口管理** 读取数据，并通过 `OH_OnMIDIReceived` 回调通知 **MIDI APP**。
+
+![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<br>
+**图 4** 端口管理与数据传输流程图
 
 ## 目录
 
@@ -98,7 +185,7 @@ midi_framework部件向开发者提供了 **Native API**，主要涵盖客户端
 
 ### 开发步骤
 
-以下演示使用 Native API 开发 MIDI 应用的完整流程，包含客户端创建、热插拔监听、设备发现、数据收发及资源释放。
+以下演示使用 Native API 开发 MIDI 应用的完整流程，包含客户端创建、热插拔监听、设备发现、数据收发及资源释放(简单起见，只展示已连接设备的示例代码)。
 
 1. **创建客户端**：初始化 MIDI 客户端上下文，并注册设备热插拔回调及服务异常回调。
 2. **发现设备与端口**：获取当前连接的设备列表，并查询设备的端口能力。
@@ -108,11 +195,6 @@ midi_framework部件向开发者提供了 **Native API**，主要涵盖客户端
 * **接收**：通过回调函数接收 UMP 格式的 MIDI 数据。
 * **发送**：构建 UMP 数据包并通过 Output 端口发送。
 6. **释放资源**：使用完毕后关闭端口、设备并销毁客户端。
-
-下图展示了使用 USB MIDI 能力的完整调用流程与组件交互逻辑：
-
-![USB MIDI 能力使用流程图](figures/zh-cn_image_midi_usb_device.png)<br>
-**图 2** USB MIDI 能力使用流程图
 
 #### 代码示例
 
@@ -244,31 +326,6 @@ void MIDIDemo() {
 * **内存获取模式**：`OH_MIDIGetDevices` 和 `OH_MIDIGetDevicePorts` 均采用“两次调用”模式。第一次传入 `nullptr` 获取数量，第二次传入分配好的缓冲区获取实际数据。
 * **非阻塞发送**：`OH_MIDISend` 为非阻塞接口。如果底层缓冲区已满，该接口可能只发送部分数据，请务必检查 `eventsWritten` 返回值。
 * **回调限制**：`OnMIDIReceived` 和 `OnDeviceChange` 回调函数运行在非 UI 线程，请勿直接在回调中执行耗时操作或操作 UI 控件。
-
-### BLE MIDI 设备接入说明
-
-对于需要使用蓝牙 MIDI 设备的场景，应用需自行负责设备的扫描与发现，通过特定接口将设备接入 MIDI 服务。具体流程如下：
-
-1. **扫描设备**：
-应用需调用系统蓝牙接口（`@ohos.bluetooth.ble`）启动 BLE 扫描。为了过滤出支持 MIDI 协议的设备，需设置 `ScanFilter` 的 `serviceUuid` 为蓝牙标准定义的 MIDI 服务 UUID。
-* **MIDI Service UUID**: `03B80E5A-EDE8-4B33-A751-6CE34EC4C700` (参照 [Bluetooth Low Energy MIDI Specification](https://midi.org/midi-over-bluetooth-low-energy-ble-midi))
-2. **建立连接**：
-扫描获取到目标设备的 MAC 地址（`deviceId`）后，调用 **OH_MIDIOpenBleDevice** 接口进行连接。
-```cpp
-OH_MIDIDevice *device = nullptr;
-int64_t midiDeviceId = 0;
-// deviceAddr: 从蓝牙扫描结果中获取的 MAC 地址字符串 (如 "XX:XX:XX:XX:XX:XX")
-OH_MIDIStatusCode ret = OH_MIDIOpenBleDevice(client, deviceAddr, &device, &midiDeviceId);
-```
-3. **统一管理**：
-连接成功后，MIDI 服务会将该 BLE 设备视为已连接的 MIDI 设备：
-* 该设备会被自动添加至 `OH_MIDIGetDevices` 能够获取的设备列表中。
-* 返回的 `OH_MIDIDevice` 句柄与 USB 设备获取的句柄功能一致，均可使用 **OH_MIDIGetDevicePorts**、**OH_MIDIOpenInputPort**、**OH_MIDISend** 等接口进行端口操作与数据收发。
-
-下图展示了 BLE MIDI 设备的扫描、连接及交互流程：
-
-![BLE MIDI 能力使用流程图](figures/zh-cn_image_midi_ble_device.png)<br>
-**图 3** BLE MIDI 能力使用流程图
 
 ## 约束
 
