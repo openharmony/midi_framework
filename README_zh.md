@@ -273,25 +273,25 @@ OH_MIDIStatusCode ret = OH_MIDIOpenBleDevice(client, deviceAddr, &device, &midiD
 ## 约束
 
 * **硬件与内核要求**
-* **USB MIDI**：OpenHarmony开发设备必须支持 USB Host 主机模式，基于当前 MIDI HDI 标准驱动依赖 alsa-libs 的实现，当前仅支持符合 **USB Audio Class (UAC)** 规范的通用免驱（Class Compliant）设备（如 USB MIDI 键盘、电子鼓）。
-* **BLE MIDI**：OpenHarmony开发设备必须支持 BLE（Bluetooth Low Energy）协议。
+  * **USB MIDI**：OpenHarmony开发设备必须支持 USB Host 主机模式，基于当前 MIDI HDI 标准驱动依赖 alsa-libs 的实现，当前仅支持符合 **USB Audio Class (UAC)** 规范的通用免驱（Class Compliant）设备（如 USB MIDI 键盘、电子鼓）。
+  * **BLE MIDI**：OpenHarmony开发设备必须支持 BLE（Bluetooth Low Energy）协议。
 
 * **驱动开发状态**
-* 当前版本的 **MIDI HAL** 主要对接标准 ALSA 接口以支持 USB 设备，代码位于[drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)。
-* MIDI HDI 驱动接口尚在标准化过程中。
+  * 当前版本的 **MIDI HAL** 主要对接标准 ALSA 接口以支持 USB 设备，代码位于[drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)。
+  * MIDI HDI 驱动接口尚在标准化过程中。
 
 * **协议与数据格式**
-* **UMP Native**：midi_framework 采用全链路 UMP 设计。无论物理设备是 MIDI 1.0 还是 MIDI 2.0，Native API 接口收发的数据**始终为 UMP 格式**。
+  * **UMP Native**：midi_framework 采用全链路 UMP 设计。无论物理设备是 MIDI 1.0 还是 MIDI 2.0，Native API 接口收发的数据**始终为 UMP 格式**。
 
 * **权限说明**
-* 应用访问 BLE MIDI 设备需要申请相应的系统权限(@ohos.permission.ACCESS_BLUETOOTH)。
+  * 应用访问 BLE MIDI 设备需要申请相应的系统权限(@ohos.permission.ACCESS_BLUETOOTH)。
 
 ## 相关仓
-[媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)
-[communication_bluetooth](https://gitcode.com/openharmony/communication_bluetooth)
-[usb_usb_manager](https://gitcode.com/openharmony/usb_usb_manager)
-[drivers_interface](https://gitcode.com/openharmony/drivers_interface)
-[drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)
-[alsa-lib](https://gitcode.com/openharmony/third_party_alsa-libs)
-[audio_framework](https://gitcode.com/openharmony/multimedia_audio_framework)
+[媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)<br>
+[communication_bluetooth](https://gitcode.com/openharmony/communication_bluetooth)<br>
+[usb_usb_manager](https://gitcode.com/openharmony/usb_usb_manager)<br>
+[drivers_interface](https://gitcode.com/openharmony/drivers_interface)<br>
+[drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)<br>
+[alsa-lib](https://gitcode.com/openharmony/third_party_alsa-libs)<br>
+[audio_framework](https://gitcode.com/openharmony/multimedia_audio_framework)<br>
 **[midi_framework](https://gitcode.com/openharmony/midi_framework-sig)**
