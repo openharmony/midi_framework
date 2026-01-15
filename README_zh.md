@@ -19,7 +19,7 @@ MIDI 部件是一个可选能力，应用需要通过 SystemCapability.Multimedi
 
 ### 系统架构与模块交互
 
-#### 1. 模块分层说明
+#### 模块功能说明
 
 整体架构划分为应用层、框架层（提供API）、系统服务层、驱动层及外设。
 
@@ -51,11 +51,11 @@ MIDI 部件是一个可选能力，应用需要通过 SystemCapability.Multimedi
 
 ---
 
-#### 2. 关键交互流程
+#### 关键交互流程
 
 为了更清晰地展示各模块如何协同工作，以下详解三大核心流程：
 
-##### A. 服务按需启动与生命周期管理
+##### 服务按需启动与生命周期管理
 
 MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系统资源消耗。
 
@@ -71,7 +71,7 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 ![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<br>
 **图 2** 服务按需启动与生命周期管理流程图
 
-##### B. 设备发现与连接管理
+##### 设备发现与连接管理
 
 设备连接流程根据物理链路（USB/BLE）的不同，涉及不同的外部模块交互。
 
@@ -92,7 +92,7 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 ![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<br>
 **图 3** 设备发现与连接管理流程图
 
-##### C. 端口管理与数据传输
+##### 端口管理与数据传输
 
 数据传输链路涉及跨进程通信与协议适配。
 
@@ -346,10 +346,6 @@ void MIDIDemo() {
 
 ## 相关仓
 [媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)<br>
-[communication_bluetooth](https://gitcode.com/openharmony/communication_bluetooth)<br>
-[usb_usb_manager](https://gitcode.com/openharmony/usb_usb_manager)<br>
 [drivers_interface](https://gitcode.com/openharmony/drivers_interface)<br>
 [drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)<br>
-[alsa-lib](https://gitcode.com/openharmony/third_party_alsa-libs)<br>
-[audio_framework](https://gitcode.com/openharmony/multimedia_audio_framework)<br>
 **[midi_framework](https://gitcode.com/openharmony/midi_framework-sig)**
