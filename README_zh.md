@@ -60,8 +60,8 @@ midi_framework 部件是一个可选系统能力，应用需要通过 SystemCapa
 MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系统资源消耗。
 
 1. **拉起服务**:
-   * 当 **MIDI APP** 调用 `OH_MIDIClientCreate` 时，**MIDI 客户端实例管理** 模块会向 **samgr 服务** 查询 MIDI 服务代理。
-   * 若服务未启动，**samgr 服务** 会自动拉起 MIDI 服务进程，并完成服务的初始化。
+   * 当 **MIDI APP** 调用 `OH_MIDIClientCreate` 时，**MIDI 客户端实例管理** 模块会向 **SAMgr 服务** 查询 MIDI 服务代理。
+   * 若服务未启动，**SAMgr 服务** 会自动拉起 MIDI 服务进程，并完成服务的初始化。
 2. **建立会话**:
    * 服务启动后，客户端通过 IPC 与服务端的 **MIDI 客户端会话管理** 模块建立连接，分配对应的服务资源。
 3. **资源回收**:
@@ -84,7 +84,7 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 
 
 * **BLE MIDI 设备流程**:
-  1. **主动发现**: **MIDI APP** 调用系统蓝牙接口（`@ohos.bluetooth.ble`的`startBLEScan`）启动扫描，根据 UUID 过滤出 BLE MIDI 外设。
+  1. **主动发现**: **MIDI APP** 调用[系统蓝牙接口](https://gitcode.com/openharmony/docs/blob/master/zh-cn/application-dev/connectivity/bluetooth/ble-development-guide.md)（`@ohos.bluetooth.ble`的`startBLEScan`）启动扫描，根据 UUID 过滤出 BLE MIDI 外设。
      * **MIDI Service UUID**: `03B80E5A-EDE8-4B33-A751-6CE34EC4C700` (参照 [Bluetooth Low Energy MIDI Specification](https://midi.org/midi-over-bluetooth-low-energy-ble-midi))
   2. **接入服务**: APP 获取 MAC 地址后，调用 `OH_MIDIOpenBleDevice`。
   3. **建立连接**: 客户端请求服务端 -> 服务端 **MIDI 设备管理** 识别为 BLE 请求 -> 调度 **蓝牙 MIDI 适配** 模块 -> 调用 **蓝牙服务** 建立 GATT 连接。
@@ -103,10 +103,10 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 2. **数据收发**:
    * **发送 (APP -> 外设)**: APP 调用 `OH_MIDISend` -> 数据写入共享内存 -> 服务端读取。
    * **分发**:
-   * 若为 **USB 设备**: 数据经由 **USB MIDI 适配** 模块 -> **MIDI 驱动** -> **USB 驱动** -> 硬件。
-   * 若为 **BLE 设备**: 数据经由 **蓝牙 MIDI 适配** 模块 -> **MIDI 协议转换** (UMP转字节流) -> **蓝牙服务** -> **蓝牙驱动** -> 硬件。
+   * 若为 **USB 设备**: 数据经由 **USB MIDI 适配** 模块 -> **MIDI 驱动** -> **USB 驱动** -> 外设。
+   * 若为 **BLE 设备**: 数据经由 **蓝牙 MIDI 适配** 模块 -> **MIDI 协议转换** (UMP转字节流) -> **蓝牙服务** -> **蓝牙驱动** -> 外设。
 3. **接收 (外设 -> APP)**:
-   * 硬件数据经驱动上报，服务端适配模块处理后（BLE 需进行协议转换），写入共享内存。
+   * 外设数据经驱动上报，服务端适配模块处理后（BLE 需进行协议转换），写入共享内存。
    * 客户端 **MIDI 端口管理** 读取数据，并通过 `OH_OnMIDIReceived` 回调通知 **MIDI APP**。
 
 ![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<br>
