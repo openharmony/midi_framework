@@ -59,6 +59,9 @@ midi_framework 部件是一个可选系统能力，应用需要通过 SystemCapa
 
 MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系统资源消耗。
 
+![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<br>
+**图 2** 服务按需启动与生命周期管理流程图
+
 1. **拉起服务**:
    * 当 **MIDI APP** 调用 `OH_MIDIClientCreate` 时，**MIDI 客户端实例管理** 模块会向 **SAMgr 服务** 查询 MIDI 服务代理。
    * 若服务未启动，**SAMgr 服务** 会自动拉起 MIDI 服务进程，并完成服务的初始化。
@@ -69,12 +72,12 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
    * **异常监测**: 建立连接时，客户端会将回调对象（Stub）注册至服务端。服务端的 **MIDI 客户端会话管理** 模块通过 IPC 机制订阅该对象的[**死亡通知（Death Recipient）**](https://gitcode.com/openharmony/docs/blob/master/zh-cn/application-dev/ipc/subscribe-remote-state.md)，服务端感知后，立即清理该客户端占用的会话与共享内存资源。
    * **退出判定**: **MIDI 服务生命周期管理** 模块持续监控会话状态。当活跃客户端数量降为 0，且在 **15秒** 内无新的连接建立时，该模块执行服务资源释放逻辑并自动退出进程。
 
-![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<br>
-**图 2** 服务按需启动与生命周期管理流程图
-
 ##### 设备发现与连接管理
 
 设备连接流程根据物理链路（USB/BLE）的不同，涉及不同的外部模块交互。
+
+![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<br>
+**图 3** 设备发现与连接管理流程图
 
 * **USB MIDI 设备流程**:
   1. **物理接入**: USB MIDI 键盘/合成器插入，**USB 驱动** 识别硬件并上报给 **USB 服务**。
@@ -90,12 +93,12 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
   3. **建立连接**: 客户端请求服务端 -> 服务端 **MIDI 设备管理** 识别为 BLE 请求 -> 调度 **蓝牙 MIDI 适配** 模块 -> 调用 **蓝牙服务** 建立 GATT 连接。
   4. **统一管理**: 连接成功后，该 BLE 设备被纳入 **MIDI 设备管理** 模块的通用列表，APP 可像操作 USB 设备一样对其进行端口操作。
 
-![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<br>
-**图 3** 设备发现与连接管理流程图
-
 ##### 端口管理与数据传输
 
 数据传输链路涉及跨进程通信与协议适配。
+
+![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<br>
+**图 4** 端口管理与数据传输流程图
 
 1. **建立通路**:
    * **MIDI APP** 调用 `OH_MIDIOpenInputPort/OutputPort`。
@@ -108,9 +111,6 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 3. **接收 (外设 -> APP)**:
    * 外设数据经驱动上报，服务端适配模块处理后（BLE 需进行协议转换），写入共享内存。
    * 客户端 **MIDI 端口管理** 读取数据，并通过 `OH_OnMIDIReceived` 回调通知 **MIDI APP**。
-
-![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<br>
-**图 4** 端口管理与数据传输流程图
 
 ## 目录
 
