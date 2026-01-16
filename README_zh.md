@@ -1,8 +1,6 @@
 # midi_framework
 
 ## 简介
-MIDI设备是指、打击垫、合成器等）。
-
 `midi_framework` 是 OpenHarmony 系统中用于管理和控制 MIDI（Musical Instrument Digital Interface）设备的模块。它提供统一的接口来管理符合 MIDI 标准的电子乐器、控制器及周边音频设备（如电子琴、电子鼓等），屏蔽底层硬件差异，使得应用能够方便地通过 Native API 与外部 MIDI 设备进行高性能交互。
 
 midi_framework 包含以下常用功能：
