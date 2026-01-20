@@ -12,8 +12,8 @@ midi_framework 部件是一个可选系统能力，应用需要通过 SystemCapa
 
 ## 系统架构
 
-![midi_framework部件架构图](figures/zh-cn_image_midi_framework.png)<br>
-**图 1** OpenHarmony MIDI 服务架构图
+<center>![midi_framework部件架构图](figures/zh-cn_image_midi_framework.png)<center/><br>
+<center>**图 1** OpenHarmony MIDI 服务架构图<center/>
 
 ### 模块功能说明
 
@@ -55,8 +55,8 @@ midi_framework 部件是一个可选系统能力，应用需要通过 SystemCapa
 
 MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系统资源消耗。
 
-![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<br>
-**图 2** 服务按需启动与生命周期管理流程图
+<center>![服务按需启动与生命周期管理流程图](figures/zh-cn_image_midi_framework_life_cycle.png)<center/><br>
+<center>**图 2** 服务按需启动与生命周期管理流程图<center/>
 
 1. **拉起服务**:
    * 当 **MIDI APP** 调用 `OH_MIDIClientCreate` 时，**MIDI 客户端实例管理** 模块会向 **SAMgr 服务** 查询 MIDI 服务代理。
@@ -72,8 +72,8 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 
 设备连接流程根据物理链路（USB/BLE）的不同，涉及不同的外部模块交互。
 
-![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<br>
-**图 3** 设备发现与连接管理流程图
+<center>![设备发现与连接管理流程图](figures/zh-cn_image_midi_framework_device_manage.png)<center/><br>
+<center>**图 3** 设备发现与连接管理流程图<center/>
 
 * **USB MIDI 设备流程**:
   1. **物理接入**: USB MIDI 键盘/合成器插入，**USB 驱动** 识别硬件并上报给 **USB 服务**。
@@ -93,8 +93,8 @@ MIDI 服务采用 **“按需启动、自动退出”** 的策略，以降低系
 
 数据传输链路涉及跨进程通信与协议适配。
 
-![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<br>
-**图 4** 端口管理与数据传输流程图
+<center>![端口管理与数据传输流程图](figures/zh-cn_image_midi_framework_data_transfer.png)<center/><br>
+<center>**图 4** 端口管理与数据传输流程图<center/>
 
 1. **建立通路**:
    * **MIDI APP** 调用 `OH_MIDIOpenInputPort/OutputPort`。
@@ -328,7 +328,10 @@ void MIDIDemo() {
 ## 约束
 
 * **硬件与内核要求**
-  * **USB MIDI**：OpenHarmony开发设备必须支持 USB Host 主机模式，基于当前 MIDI HDI 标准驱动依赖 alsa-libs 的实现，当前仅支持符合 **USB Audio Class (UAC)** 规范的通用免驱（Class Compliant）设备（如 USB MIDI 键盘、电子鼓）。
+  * **USB MIDI**：OpenHarmony 开发设备必须支持 **USB Host 主机模式**。由于当前 MIDI HDI 驱动依赖 alsa-libs 实现，因此未开启ALSA内核选项的设备无法使用 USB MIDI 相关功能。
+    * 容易遇到的问题
+      * rk3568 开发板默认配置未开启 ALSA 支持，因此需参考 [alsa-libs 如何使用](https://gitcode.com/openharmony/third_party_alsa-lib#5-如何使用) 进行内核编译开关配置，重新编译并刷入内核后方可使用 USB MIDI 功能。目前仅支持符合 **USB Audio Class (UAC)** 规范的通用设备（如 USB MIDI 键盘、电子鼓）。
+      * 由于编译工具更新了独立编译规范，Audio HDF 驱动层代码可能出现直接依赖其他组件（即//device/board目录下）代码文件的问题，如果想测试，可以手动将对应c文件拷贝到驱动层路径进行编译。
   * **BLE MIDI**：OpenHarmony开发设备必须支持 BLE（Bluetooth Low Energy）协议。
 
 * **驱动开发状态**
@@ -343,4 +346,5 @@ void MIDIDemo() {
 [媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)<br>
 [drivers_interface](https://gitcode.com/openharmony/drivers_interface)<br>
 [drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)<br>
+[alsa-libs](https://gitcode.com/openharmony/third_party_alsa-lib)<br>
 **[midi_framework](https://gitcode.com/openharmony/midi_framework-sig)**
