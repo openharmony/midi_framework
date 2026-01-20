@@ -340,19 +340,24 @@ void MIDIDemo() {
 ## 约束
 
 * **硬件与内核要求**
-  * **USB MIDI**：OpenHarmony 开发设备必须支持 **USB Host 主机模式**。由于当前 MIDI HDI 驱动依赖 alsa-libs 实现，因此未开启ALSA内核选项的设备无法使用 USB MIDI 相关功能。
-    * 容易遇到的问题
-      * rk3568 开发板默认配置未开启 ALSA 支持，因此需参考 [alsa-libs 如何使用](https://gitcode.com/openharmony/third_party_alsa-lib#5-如何使用) 进行内核编译开关配置，重新编译并刷入内核后方可使用 USB MIDI 功能。目前仅支持符合 **USB Audio Class (UAC)** 规范的通用设备（如 USB MIDI 键盘、电子鼓）。
-      * 由于编译工具更新了独立编译规范，Audio HDF 驱动层代码可能出现直接依赖其他组件（即//device/board目录下）代码文件的问题，如果想测试，可以手动将对应c文件拷贝到驱动层路径进行编译。
-  * **BLE MIDI**：OpenHarmony开发设备必须支持 BLE（Bluetooth Low Energy）协议。
+  * **USB MIDI**：OpenHarmony 开发设备必须支持 **USB Host 主机模式**。
+    * **ALSA 依赖**：当前 MIDI HDI 驱动依赖 `alsa-libs` 实现，未开启 ALSA 内核选项的设备将无法枚举和使用 USB MIDI 设备。
+    * **RK3568 适配注意事项**（以 RK3568 为例）：
+      * **内核配置**：默认配置通常未开启 ALSA。需参考 [alsa-libs 使用指南](https://gitcode.com/openharmony/third_party_alsa-lib#5-如何使用) 修改内核配置文件（`arch/arm64_defconfig`），开启 ALSA 支持并重新编译烧录内核。
+      * **组件配置**：需在 `vendor/hihope/rk3568/config.json` 中确保 `midi_framework`、`drivers_peripheral_midi`、`drivers_interface_midi` 等部件已加入编译。
+      * **权限配置**：需检查 `/system/etc/ueventd.config`，确保 `midi_server` 对 `/dev/snd/controlC*` 及 `/dev/snd/midiC*D*` 拥有访问权限（通常需配置为 `0660 system audio`），否则会导致**设备列表为空**。
+      * **编译依赖**：由于编译环境更新了对独立构建部件的要求，若遇到 Audio HDF 驱动层缺少头文件或源码依赖报错，可尝试将缺少的板级代码（位于 `device/board/...`）手动拷贝至驱动目录临时规避。
+  * **BLE MIDI**：OpenHarmony 开发设备必须支持 BLE（Bluetooth Low Energy）协议。
 
 * **驱动开发状态**
-  * 当前版本的 **MIDI HAL** 主要对接标准 ALSA 接口以支持 USB 设备，代码位于[drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)。
+  * 当前版本的 **MIDI HAL** 主要对接标准 ALSA 接口以支持 USB 设备，代码位于 [drivers_peripheral](https://gitcode.com/openharmony/drivers_peripheral)。
   * MIDI HDI 驱动接口尚在标准化过程中。
 
-* **协议与数据格式**：midi_framework 采用全链路 **UMP Native** 设计。无论物理设备是 MIDI 1.0 还是 MIDI 2.0，Native API 接口收发的数据**始终为 UMP 格式**。
+* **协议与数据格式**
+  * `midi_framework` 采用全链路 **UMP (Universal MIDI Packet) Native** 设计。无论物理设备是 MIDI 1.0 还是 MIDI 2.0，Native API 接口收发的数据**始终为 UMP 格式**。
 
-* **权限说明**：应用访问 BLE MIDI 设备需要申请相应的系统权限 (`@ohos.permission.ACCESS_BLUETOOTH`)。
+* **权限说明**
+  * 应用访问 BLE MIDI 设备需要申请相应的系统权限 (`@ohos.permission.ACCESS_BLUETOOTH`)。
 
 ## 相关仓
 [媒体子系统](https://gitcode.com/openharmony/docs/blob/master/zh-cn/readme/媒体子系统.md)<br>
