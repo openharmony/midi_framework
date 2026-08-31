@@ -17,8 +17,10 @@
 #define LOG_TAG "MidiClient"
 #endif
 
+#include <charconv>
 #include <cstring>
 #include <chrono>
+#include <limits>
 
 #include "midi_log.h"
 #include "midi_client_private.h"
@@ -31,6 +33,15 @@ namespace MIDI {
 namespace {
 std::vector<std::unique_ptr<MidiClient>> clients;
 std::mutex clientsMutex;
+
+template<typename T>
+bool ParseInteger(const std::string &value, T &result)
+{
+    const char *first = value.data();
+    const char *last = first + value.size();
+    auto parsed = std::from_chars(first, last, result);
+    return parsed.ec == std::errc{} && parsed.ptr == last;
+}
 }  // namespace
 
 class MidiClientCallback : public MidiCallbackStub {
@@ -53,15 +64,19 @@ static bool ConvertToDeviceInformation(
 
     auto it = deviceInfo.find(DEVICE_ID);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "deviceId error");
-    outInfo.midiDeviceId = std::stoll(it->second);
+    CHECK_AND_RETURN_RET_LOG(ParseInteger(it->second, outInfo.midiDeviceId), false, "deviceId value error");
 
     it = deviceInfo.find(DEVICE_TYPE);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "deviceType error");
-    outInfo.deviceType = static_cast<OH_MIDIDeviceType>(std::stoi(it->second));
+    int32_t deviceType = 0;
+    CHECK_AND_RETURN_RET_LOG(ParseInteger(it->second, deviceType), false, "deviceType value error");
+    outInfo.deviceType = static_cast<OH_MIDIDeviceType>(deviceType);
 
     it = deviceInfo.find(MIDI_PROTOCOL);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "protocol error");
-    outInfo.nativeProtocol = static_cast<OH_MIDIProtocol>(std::stoi(it->second));
+    int32_t protocol = 0;
+    CHECK_AND_RETURN_RET_LOG(ParseInteger(it->second, protocol), false, "protocol value error");
+    outInfo.nativeProtocol = static_cast<OH_MIDIProtocol>(protocol);
 
     it = deviceInfo.find(PRODUCT_NAME);
     CHECK_AND_RETURN_RET_LOG(it != deviceInfo.end(), false, "productName error");
@@ -91,10 +106,16 @@ static bool ConvertToPortInformation(
     auto it = portInfo.find(PORT_INDEX);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end(), false, "port index error");
 
-    outInfo.portIndex = static_cast<uint32_t>(std::stoll(it->second));
+    int64_t portIndex = 0;
+    CHECK_AND_RETURN_RET_LOG(ParseInteger(it->second, portIndex), false, "port index value error");
+    CHECK_AND_RETURN_RET_LOG(portIndex >= 0 &&
+        portIndex <= std::numeric_limits<uint32_t>::max(), false, "port index out of range");
+    outInfo.portIndex = static_cast<uint32_t>(portIndex);
     it = portInfo.find(DIRECTION);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end(), false, "direction error");
-    outInfo.direction = static_cast<OH_MIDIPortDirection>(std::stoi(it->second));
+    int32_t direction = 0;
+    CHECK_AND_RETURN_RET_LOG(ParseInteger(it->second, direction), false, "direction value error");
+    outInfo.direction = static_cast<OH_MIDIPortDirection>(direction);
 
     it = portInfo.find(PORT_NAME);
     CHECK_AND_RETURN_RET_LOG(it != portInfo.end() && !it->second.empty(), false, "port name error");

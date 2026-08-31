@@ -247,6 +247,31 @@ HWTEST_F(MidiClientUnitTest, GetDevices_002, TestSize.Level0)
 }
 
 /**
+ * @tc.name: GetDevices_InvalidNumericValue_001
+ * @tc.desc: Test malformed numeric metadata is rejected without throwing.
+ * @tc.type: FUNC
+ */
+HWTEST_F(MidiClientUnitTest, GetDevices_InvalidNumericValue_001, TestSize.Level0)
+{
+    EXPECT_CALL(*mockService, GetDevices(_)).WillOnce(Invoke([](std::vector<std::map<int32_t, std::string>> &infos) {
+        infos.push_back({{DEVICE_ID, "9223372036854775808"},
+            {DEVICE_TYPE, "0"},
+            {MIDI_PROTOCOL, "1"},
+            {PRODUCT_NAME, "Mock_Piano"},
+            {VENDOR_NAME, "MockVendor"}});
+        return MIDI_STATUS_OK;
+    }));
+
+    OH_MIDICallbacks callbacks {};
+    EXPECT_EQ(client->Init(callbacks, nullptr), MIDI_STATUS_OK);
+
+    OH_MIDIDeviceInformation info {};
+    size_t numDevices = 1;
+    EXPECT_EQ(client->GetDevices(&info, &numDevices), MIDI_STATUS_OK);
+    EXPECT_EQ(numDevices, 0);
+}
+
+/**
  * @tc.name: GetDevicePorts_001
  * @tc.desc: Test getting port information for a specific device.
  * @tc.type: FUNC
